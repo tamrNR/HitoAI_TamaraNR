@@ -1,0 +1,70 @@
+<div class="main-layout">
+  <!-- Sidebar reutilizable -->
+  <app-sidebar [rol]="rolUsuario"></app-sidebar>
+
+
+  <!-- Contenido principal -->
+  <div class="main-content p-4" style="background-color: #f4f6fa; min-height: 100vh; margin-left: 70px;">
+    <!-- Botones y título -->
+    <div class="d-flex justify-content-between align-items-start flex-wrap mb-4 gap-2">
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-success" (click)="abrirDialog('crear')">
+          <i class="bi bi-plus-circle me-1"></i> Nueva Carrera
+        </button>
+      </div>
+      <h3 class="fw-bold text-nowrap" style="color: #002F5D;">
+        <i class="bi bi-mortarboard-fill me-2"></i>Gestión de Carreras Académicas
+      </h3>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Buscar por nombre o jefe..."
+          [(ngModel)]="filtroTexto"
+          (input)="aplicarFiltro()"
+        />
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-0 table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Nombre</th>
+              <th>Jefe de Carrera</th>
+              <th>Facultad</th>
+              <th class="text-end">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let carrera of carrerasFiltradas" style="cursor: pointer;">
+              <td>{{ carrera.Nombre }}</td>
+              <td>{{ carrera.JefeCarrera }}</td>
+              <td>{{ carrera.Facultad }}</td>
+              <td class="text-end">
+                <div ngbDropdown container="body" class="d-inline-block">
+                  <button class="btn btn-sm btn-outline-secondary" type="button" ngbDropdownToggle>
+                    <i class="bi bi-three-dots-vertical"></i>
+                  </button>
+                  <div ngbDropdownMenu>
+                    <button class="dropdown-item" (click)="abrirDialog('ver', carrera)">
+                      <i class="bi bi-eye me-1"></i> Ver
+                    </button>
+                    <button class="dropdown-item" (click)="abrirDialog('editar', carrera)">
+                      <i class="bi bi-pencil-square me-1"></i> Editar
+                    </button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

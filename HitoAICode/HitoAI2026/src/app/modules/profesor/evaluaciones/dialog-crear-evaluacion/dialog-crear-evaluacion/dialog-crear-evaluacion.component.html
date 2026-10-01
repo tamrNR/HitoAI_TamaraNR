@@ -1,0 +1,73 @@
+<div class="modal-header">
+  <h5 class="modal-title text-primary">Crear Evaluación</h5>
+  <button type="button" class="btn-close" (click)="cancelar()" [disabled]="bloqueado"></button>
+</div>
+
+<div class="modal-body">
+  <div class="mb-3">
+    <label class="form-label">Nombre</label>
+    <input type="text" class="form-control" [(ngModel)]="nombre" [disabled]="bloqueado">
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Tipo de Evaluación</label>
+    <input type="text" class="form-control" [(ngModel)]="tipo" [disabled]="bloqueado">
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Fecha</label>
+    <input type="date" class="form-control" [(ngModel)]="fechaActual" [disabled]="bloqueado">
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Instancia</label>
+    <input type="number" class="form-control" [value]="instancia" disabled>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Contenidos a Evaluar</label>
+    <div *ngFor="let c of contenidos" class="form-check">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        [value]="c.ID_Contenido"
+        (change)="toggleContenido(c.ID_Contenido)"
+        [disabled]="bloqueado"
+        [checked]="seleccionados.includes(c.ID_Contenido)"
+      />
+      <label class="form-check-label">
+        {{ c.Nucleo_Tematico }}
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- Toast de Éxito -->
+<div *ngIf="mensajeExito" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+  <div class="toast show text-bg-success" role="alert">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ mensajeExito }}
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" (click)="mensajeExito = ''"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast de Error -->
+<div *ngIf="mensajeError" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+  <div class="toast show text-bg-danger bg-opacity-75" role="alert">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ mensajeError }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-footer">
+  <button class="btn btn-success" (click)="crear()" [disabled]="bloqueado">
+    <i class="bi bi-check-circle me-1"></i> Crear Evaluación
+  </button>
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">Cancelar</button>
+</div>

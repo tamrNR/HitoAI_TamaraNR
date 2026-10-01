@@ -1,0 +1,29 @@
+<div class="card shadow-sm border-start border-4 border-success mb-3 h-100">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h6 class="fw-bold text-success mb-2 d-flex align-items-center">
+          <i class="bi bi-people-fill me-2"></i>
+          Grupo {{ numero }}
+          <i *ngIf="grupoEvaluado" class="bi bi-check-circle-fill text-success ms-2" title="Grupo evaluado"></i>
+          <span *ngIf="nota !== null" class="badge bg-primary ms-2">{{ nota }}</span>
+        </h6>
+
+        <p class="mb-0 small text-muted">Integrantes: {{ estudiantes.length }}</p>
+      </div>
+
+<button class="btn btn-outline-success btn-sm" (click)="abrirDialog()">
+  <i class="bi bi-pencil-square me-1"></i> {{ textoBoton }}
+</button>
+
+    </div>
+
+    <div class="mt-2">
+      <ul class="mb-0 ps-3">
+        <li *ngFor="let est of estudiantes">
+          {{ est.Nombre }} {{ est.Apellido }}
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>

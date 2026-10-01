@@ -1,0 +1,180 @@
+<div class="modal-header">
+  <h5 class="modal-title d-flex align-items-center gap-2" style="color: #002F5D">
+    <i class="bi bi-clipboard2-check"></i>
+    {{
+      modo === 'crear'
+        ? 'Crear Indicador'
+        : modo === 'editar'
+        ? 'Editar Indicador'
+        : 'Ver Indicador'
+    }}
+  </h5>
+  <button type="button" class="btn-close" (click)="cancelar()" [disabled]="bloqueado"></button>
+</div>
+
+<div class="modal-body position-relative">
+  <form *ngIf="modo !== 'ver'">
+    <div class="mb-3">
+      <label class="form-label">Descripción del Indicador</label>
+      <textarea class="form-control" [(ngModel)]="indicador.Descripcion" name="descripcion" rows="2" [disabled]="bloqueado" required></textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Puntaje Máximo</label>
+      <input type="number" class="form-control" [(ngModel)]="indicador.Puntaje_Max" name="puntaje" min="1" [disabled]="bloqueado" required />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Resultado de Aprendizaje (RA)</label>
+      <select class="form-select" [(ngModel)]="indicador.ra_ID_RA" name="ra_ID_RA" [disabled]="bloqueado" required>
+        <option value="" disabled selected>Seleccione un RA</option>
+        <option *ngFor="let ra of ras" [value]="ra.ID_RA">{{ ra.Nombre }}</option>
+      </select>
+    </div>
+
+    <h6 class="mt-4 mb-2 fw-bold text-primary">Criterios</h6>
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered align-middle text-center">
+        <thead class="table-light">
+          <tr>
+            <th>Nombre</th>
+            <th>Rango Mínimo</th>
+            <th>Rango Máximo</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of indicador.Criterios; let i = index">
+
+            <td>
+              <input
+                type="text"
+                class="form-control form-control-sm"
+                [(ngModel)]="c.Nombre"
+                name="nombre{{ i }}"
+                [ngModelOptions]="{ standalone: true }"
+                [disabled]="bloqueado"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                [(ngModel)]="c.R_Min"
+                name="rmin{{ i }}"
+                [ngModelOptions]="{ standalone: true }"
+                min="1"
+                [disabled]="bloqueado"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                [(ngModel)]="c.R_Max"
+                name="rmax{{ i }}"
+                [ngModelOptions]="{ standalone: true }"
+                min="1"
+                [disabled]="bloqueado"
+              />
+            </td>
+
+            <td>
+              <button class="btn btn-sm btn-outline-danger" (click)="eliminarCriterio(i)" [disabled]="bloqueado">
+                <i class="bi bi-dash-circle"></i>
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="4" class="text-end">
+              <button class="btn btn-sm btn-outline-success" (click)="agregarCriterio()" [disabled]="bloqueado">
+                <i class="bi bi-plus-circle"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Confirmación -->
+    <div *ngIf="accionConfirmada && !bloqueado" class="confirm-overlay shadow p-4 rounded border mt-3" style="background-color: #f9f9f9;">
+      <h5 class="mb-3 d-flex align-items-center gap-2">
+        <i
+          class="bi fs-4"
+          [ngClass]="{
+            'bi-exclamation-triangle-fill text-danger': accionConfirmada === 'eliminar',
+            'bi-check-circle-fill text-success': accionConfirmada === 'crear',
+            'bi-pencil-fill text-primary': accionConfirmada === 'actualizar'
+          }"
+        ></i>
+        Confirmar {{ accionConfirmada }}
+      </h5>
+      <p>¿Estás seguro de que deseas <strong>{{ accionConfirmada }}</strong> este indicador?</p>
+      <div class="d-flex justify-content-end gap-2 mt-3">
+        <button class="btn btn-success btn-sm" *ngIf="accionConfirmada === 'crear'" (click)="crear()">Sí, crear</button>
+        <button class="btn btn-primary btn-sm" *ngIf="accionConfirmada === 'actualizar'" (click)="actualizar()">Sí, actualizar</button>
+        <button class="btn btn-danger btn-sm" *ngIf="accionConfirmada === 'eliminar'" (click)="eliminar()">Sí, eliminar</button>
+        <button class="btn btn-outline-secondary btn-sm" (click)="cancelarConfirmacion()">Cancelar</button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Vista solo lectura -->
+  <div *ngIf="modo === 'ver'">
+    <p><strong>Descripción:</strong> {{ indicador.Descripcion }}</p>
+    <p><strong>Puntaje Máximo:</strong> {{ indicador.Puntaje_Max }}</p>
+    <p><strong>RA:</strong> {{ getNombreRA() }}</p>
+
+    <h6 class="mt-3 mb-2 fw-bold text-primary">Criterios</h6>
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item" *ngFor="let c of indicador.Criterios">
+        <strong>{{ c.Nombre }}</strong> — Rango: {{ c.R_Min }} - {{ c.R_Max }}
+      </li>
+    </ul>
+  </div>
+
+  <!-- Toast éxito -->
+  <div *ngIf="mensajeExito && bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+    <div class="toast show text-bg-success" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="bi bi-check-circle-fill me-2"></i>{{ mensajeExito }}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" (click)="cerrarToast()"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast error -->
+  <div *ngIf="mensajeError && !bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+    <div class="toast show text-bg-danger bg-opacity-75" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ mensajeError }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="modal-footer d-flex justify-content-end gap-2" *ngIf="modo !== 'ver' && !mensajeExito && !accionConfirmada">
+  <button *ngIf="modo === 'crear'" class="btn btn-primary" (click)="crear()" [disabled]="bloqueado">
+    <i class="bi bi-plus-circle me-1"></i> Crear
+  </button>
+  <button *ngIf="modo === 'editar'" class="btn btn-success" (click)="actualizar()" [disabled]="bloqueado">
+    <i class="bi bi-pencil-square me-1"></i> Guardar
+  </button>
+  <button *ngIf="modo === 'editar'" class="btn btn-danger" (click)="eliminar()" [disabled]="bloqueado">
+    <i class="bi bi-trash3 me-1"></i> Eliminar
+  </button>
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">
+    <i class="bi bi-x-circle me-1"></i> Cancelar
+  </button>
+</div>
+
+<div class="modal-footer" *ngIf="modo === 'ver' || mensajeExito">
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">
+    <i class="bi bi-x-circle me-1"></i> Cerrar
+  </button>
+</div>

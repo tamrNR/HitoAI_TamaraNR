@@ -1,0 +1,160 @@
+<div class="modal-header">
+  <h5 class="modal-title d-flex align-items-center gap-2" style="color: #002F5D">
+    <i class="bi bi-mortarboard-fill"></i>
+    {{
+      modo === 'crear'
+        ? 'Crear Carrera'
+        : modo === 'editar'
+        ? 'Editar Carrera'
+        : 'Ver Carrera'
+    }}
+  </h5>
+  <button type="button" class="btn-close" (click)="cancelar()" [disabled]="bloqueado"></button>
+</div>
+
+<div class="modal-body position-relative">
+  <form *ngIf="modo !== 'ver'">
+    <div class="mb-3">
+      <label class="form-label">Nombre</label>
+      <input
+        type="text"
+        class="form-control"
+        [(ngModel)]="carrera.Nombre"
+        name="nombre"
+        [disabled]="bloqueado"
+        required
+      />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Jefe de Carrera</label>
+      <select
+        class="form-select"
+        [(ngModel)]="carrera.usuario_ID_Usuario"
+        name="jefe"
+        [disabled]="bloqueado"
+        required
+      >
+        <option [value]="''" disabled>Seleccione un jefe</option>
+        <option *ngFor="let jefe of jefes" [value]="jefe.ID_Usuario">
+          {{ jefe.Nombre }}
+        </option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Facultad</label>
+      <input type="text" class="form-control" value="FAIN" disabled />
+    </div>
+  </form>
+
+  <!-- Vista solo lectura -->
+  <div *ngIf="modo === 'ver'">
+    <p><strong>Nombre:</strong> {{ carrera.Nombre }}</p>
+    <p><strong>Jefe de Carrera:</strong> {{ nombreJefe }}</p>
+    <p><strong>Facultad:</strong> FAIN</p>
+
+    <hr />
+
+    <div *ngIf="cargandoStats" class="text-muted small">
+      <i class="bi bi-hourglass-split me-1"></i> Cargando estadísticas...
+    </div>
+
+    <div *ngIf="estadisticas && !cargandoStats">
+      <p>
+        <strong>Total estudiantes activos:</strong>
+        <span class="badge bg-primary ms-2">{{ estadisticas.total_estudiantes }}</span>
+      </p>
+      <p class="mb-1"><strong>Generaciones cargadas:</strong></p>
+      <div class="d-flex flex-wrap gap-2 mt-1">
+        <span *ngIf="estadisticas.generaciones.length === 0" class="text-muted small">
+          Sin generaciones registradas aún.
+        </span>
+        <span *ngFor="let gen of estadisticas.generaciones"
+              class="badge"
+              style="background-color: #002F5D;">
+          {{ gen }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmación -->
+  <div *ngIf="accionConfirmada && !bloqueado" class="confirm-overlay shadow p-4 rounded border mt-3" style="background-color: #f9f9f9;">
+    <h5 class="mb-3">
+      <i
+        class="bi"
+        [ngClass]="{
+          'bi-exclamation-triangle-fill': accionConfirmada === 'eliminar',
+          'bi-check-circle-fill': accionConfirmada === 'crear',
+          'bi-pencil-fill': accionConfirmada === 'actualizar'
+        }"
+      ></i>
+      Confirmar {{ accionConfirmada }}
+    </h5>
+
+    <p>¿Estás seguro de que deseas <strong>{{ accionConfirmada }}</strong> esta carrera?</p>
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+      <button class="btn btn-success btn-sm text-white" *ngIf="accionConfirmada === 'crear'" (click)="crearCarrera()">
+        Sí, crear
+      </button>
+      <button class="btn btn-primary btn-sm text-white" *ngIf="accionConfirmada === 'actualizar'" (click)="actualizarCarrera()">
+        Sí, actualizar
+      </button>
+      <button class="btn btn-danger btn-sm text-white" *ngIf="accionConfirmada === 'eliminar'" (click)="eliminarCarrera()">
+        Sí, eliminar
+      </button>
+      <button class="btn btn-outline-secondary btn-sm" (click)="cancelarConfirmacion()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="modal-footer" *ngIf="modo !== 'ver' && !mensajeExito && !accionConfirmada">
+  <button *ngIf="modo === 'crear'" class="btn btn-primary" (click)="crearCarrera()" [disabled]="bloqueado">
+    <i class="bi bi-plus-circle me-1"></i> Crear
+  </button>
+  <button *ngIf="modo === 'editar'" class="btn btn-success" (click)="actualizarCarrera()" [disabled]="bloqueado">
+    <i class="bi bi-pencil-square me-1"></i> Guardar
+  </button>
+  <button *ngIf="modo === 'editar'" class="btn btn-danger" (click)="eliminarCarrera()" [disabled]="bloqueado">
+    <i class="bi bi-trash3-fill me-1"></i> Eliminar
+  </button>
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">Cancelar</button>
+</div>
+
+<div class="modal-footer" *ngIf="modo === 'ver' || mensajeExito">
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">Cerrar</button>
+</div>
+
+<!-- Toast éxito -->
+<div
+  *ngIf="mensajeExito && bloqueado"
+  class="toast-container position-fixed bottom-0 end-0 p-3"
+  style="z-index: 2000"
+>
+  <div class="toast show text-bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ mensajeExito }}
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" (click)="cerrarToast()"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast error -->
+<div
+  *ngIf="mensajeError && !bloqueado"
+  class="toast-container position-fixed bottom-0 end-0 p-3"
+  style="z-index: 2000"
+>
+  <div class="toast show text-bg-danger bg-opacity-75" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ mensajeError }}
+      </div>
+    </div>
+  </div>
+</div>

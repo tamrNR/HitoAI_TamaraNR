@@ -1,0 +1,37 @@
+/* Modal personalizado con altura aumentada */
+.modal-custom-height .modal-content {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-custom-height .modal-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Contenedor con scroll para la tabla */
+.table-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* Asegurar que el dropdown se muestre por encima del contenido */
+.dropdown-menu {
+  z-index: 1055;
+}
+
+/* Ajustar altura de filas de la tabla */
+table tbody tr {
+  min-height: 48px;
+}
+
+table td,
+table th {
+  vertical-align: middle;
+  padding: 0.75rem;
+}

@@ -1,0 +1,187 @@
+<div class="modal-header">
+  <h5 class="modal-title d-flex align-items-center gap-2" style="color: #002F5D">
+    <i class="bi bi-journal-text"></i>
+    {{
+      modo === 'crear'
+        ? 'Crear Asignatura'
+        : modo === 'editar'
+        ? 'Editar Asignatura'
+        : 'Ver Asignatura'
+    }}
+  </h5>
+  <button type="button" class="btn-close" (click)="cancelar()" [disabled]="bloqueado"></button>
+</div>
+
+<div class="modal-body position-relative">
+  <!-- FORMULARIO -->
+  <form *ngIf="modo !== 'ver'">
+    <div class="mb-3">
+      <label class="form-label">ID Asignatura</label>
+      <input type="text" class="form-control" [(ngModel)]="asignatura.ID_Asignatura" name="id"
+             [disabled]="bloqueado || modo !== 'crear'" required />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Nombre</label>
+      <input type="text" class="form-control" [(ngModel)]="asignatura.Nombre" name="nombre"
+             [disabled]="bloqueado" required />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Semestre</label>
+      <input type="number" class="form-control" [(ngModel)]="asignatura.Semestre" name="semestre"
+             [disabled]="bloqueado" min="1" max="2" required />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">N° Hito</label>
+      <input type="number" class="form-control" [(ngModel)]="asignatura.N_Hito" name="hito"
+             [disabled]="bloqueado" min="1" max="4" required />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Plan Académico</label>
+      <input type="number" class="form-control" [(ngModel)]="asignatura.Plan_Academico" name="plan"
+             [disabled]="bloqueado" min="2000" max="2100" required />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Carrera</label>
+      <select class="form-select" [(ngModel)]="asignatura.carrera_ID_Carrera" name="carrera"
+              [disabled]="bloqueado" required>
+        <option [value]="''" disabled>Seleccione una carrera</option>
+        <option *ngFor="let c of carreras" [value]="c.ID_Carrera">{{ c.Nombre }}</option>
+      </select>
+    </div>
+<div class="mb-3">
+  <label class="form-label">Profesor</label>
+  <select class="form-select" [(ngModel)]="asignatura.usuario_ID_Usuario" name="profesor" required>
+    <option [value]="''" disabled>Seleccione un profesor</option>
+    <option *ngFor="let p of profesores" [value]="p.ID_Usuario">{{ p.Nombre }}</option>
+  </select>
+</div>
+
+<!-- Confirmación -->
+<div *ngIf="accionConfirmada && !bloqueado" class="confirm-overlay shadow p-4 rounded border mt-3" style="background-color: #f9f9f9;">
+  <h5 class="mb-3">
+    <i
+      class="bi"
+      [ngClass]="{
+        'bi-exclamation-triangle-fill': accionConfirmada === 'eliminar',
+        'bi-check-circle-fill': accionConfirmada === 'crear',
+        'bi-pencil-fill': accionConfirmada === 'actualizar'
+      }"
+    ></i>
+    Confirmar {{ accionConfirmada }}
+  </h5>
+
+  <p>¿Estás seguro de que deseas <strong>{{ accionConfirmada }}</strong> esta asignatura?</p>
+
+  <div class="d-flex justify-content-end gap-2 mt-3">
+    <button class="btn btn-success btn-sm text-white" *ngIf="accionConfirmada === 'crear'" (click)="crear()">Sí, crear</button>
+    <button class="btn btn-primary btn-sm text-white" *ngIf="accionConfirmada === 'actualizar'" (click)="actualizar()">Sí, actualizar</button>
+    <button class="btn btn-danger btn-sm text-white" *ngIf="accionConfirmada === 'eliminar'" (click)="eliminar()">Sí, eliminar</button>
+    <button class="btn btn-outline-secondary btn-sm" (click)="cancelarConfirmacion()">Cancelar</button>
+  </div>
+</div>
+
+  </form>
+
+  <!-- VISTA SOLO LECTURA -->
+  <div *ngIf="modo === 'ver'">
+    <p><strong>ID:</strong> {{ asignatura.ID_Asignatura }}</p>
+    <p><strong>Nombre:</strong> {{ asignatura.Nombre }}</p>
+    <p><strong>Semestre:</strong> {{ asignatura.Semestre }}</p>
+    <p><strong>N° Hito:</strong> {{ asignatura.N_Hito }}</p>
+    <p><strong>Plan Académico:</strong> {{ asignatura.Plan_Academico }}</p>
+    <p><strong>Carrera:</strong> {{ nombreCarrera }}</p>
+    <p><strong>Umbral de Aprobación:</strong> {{ asignatura.Umbral }}%</p>
+
+    <!-- ESTUDIANTES INSCRITOS -->
+    <div class="mt-4">
+      <h6 class="fw-bold text-secondary mb-2">Estudiantes inscritos</h6>
+      <table class="table table-sm table-striped">
+        <thead class="table-light">
+          <tr>
+            <th>RUT</th>
+            <th>Nombre</th>
+            <th>Apellido</th>
+            <th>Año</th>
+          <th *ngIf="puedeDesvincular"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let est of estudiantesInscritos">
+            <td>{{ est.ID_Estudiante | rutFormat }}</td>
+            <td>{{ est.Nombre }}</td>
+            <td>{{ est.Apellido }}</td>
+            <td>{{ est.Anio }}</td>
+            <td *ngIf="puedeDesvincular">
+              <button class="btn btn-sm border border-danger text-danger bg-light"
+                      (click)="marcarParaDesvincular(est)">
+                <i class="bi bi-dash-circle"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Confirmación visual de desvincular -->
+      <div *ngIf="estudianteParaDesvincular && puedeDesvincular" class="confirm-overlay shadow p-4 rounded border mt-3 bg-white text-dark" style="background-color: #f9f9f9;">
+        <h5 class="mb-3">
+          <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>
+          Confirmar desvinculación
+        </h5>
+        <p class="mb-0">
+          ¿Deseas <strong>desvincular</strong> al estudiante
+          <strong>{{ estudianteParaDesvincular.Nombre }} {{ estudianteParaDesvincular.Apellido }}</strong>?
+        </p>
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <button class="btn btn-danger btn-sm" (click)="confirmarDesvincular()">Sí, desvincular</button>
+          <button class="btn btn-outline-secondary btn-sm" (click)="cancelarConfirmacion()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="modal-footer" *ngIf="modo !== 'ver' && !mensajeExito && !accionConfirmada">
+  <button *ngIf="modo === 'crear'" class="btn btn-primary" (click)="crear()" [disabled]="bloqueado">
+    <i class="bi bi-plus-circle me-1"></i> Crear
+  </button>
+  <button *ngIf="modo === 'editar'" class="btn btn-success" (click)="actualizar()" [disabled]="bloqueado">
+    <i class="bi bi-pencil-square me-1"></i> Guardar
+  </button>
+  <button *ngIf="modo === 'editar'" class="btn btn-danger" (click)="eliminar()" [disabled]="bloqueado">
+    <i class="bi bi-trash3-fill me-1"></i> Eliminar
+  </button>
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">Cancelar</button>
+</div>
+
+<div class="modal-footer" *ngIf="modo === 'ver' || mensajeExito">
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">Cerrar</button>
+</div>
+
+<!-- TOAST ÉXITO -->
+<div *ngIf="mensajeExito && bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+  <div class="toast show text-bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ mensajeExito }}
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" (click)="cerrarToast()"></button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST ERROR -->
+<div *ngIf="mensajeError && !bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+  <div class="toast show text-bg-danger bg-opacity-75" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ mensajeError }}
+      </div>
+    </div>
+  </div>
+</div>

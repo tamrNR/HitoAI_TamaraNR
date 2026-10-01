@@ -1,0 +1,163 @@
+/* You can add global styles to this file, and also import other style files */
+
+/* Global layout styles to prevent horizontal scroll */
+html,
+body {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* Main layout container */
+.main-layout {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+/* Main content area */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Ensure all containers are responsive */
+.card,
+.chart-card,
+.container-fluid,
+.container {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Responsive grid adjustments */
+.row {
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.col,
+.col-1,
+.col-2,
+.col-3,
+.col-4,
+.col-5,
+.col-6,
+.col-7,
+.col-8,
+.col-9,
+.col-10,
+.col-11,
+.col-12 {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+body.dark-mode {
+
+  background-color: #1e1e1e;
+  color: #ffffff;
+}
+
+body.dark-mode a {
+  color: #9ecbff;
+}
+
+body.dark-mode .sidebar {
+  background-color: #1b1b1b !important;
+}
+
+body.dark-mode .form-control {
+  background-color: #454545;
+  color: #ffffff;
+  border-color: #666666;
+}
+
+body.dark-mode .btn-primary {
+  background-color: #0d6efd;
+}
+
+
+/* Override common light backgrounds */
+body.dark-mode .bg-white,
+body.dark-mode .bg-light,
+body.dark-mode .card,
+body.dark-mode .modal-content,
+body.dark-mode [style*="#f4f6fa"],
+body.dark-mode [style*="#f9f9f9"] {
+  background-color: #2e2e2e !important;
+  color: #ffffff;
+}
+
+body.dark-mode .table-light {
+  background-color: #2b2b2b !important;
+  color: #ffffff !important;
+  --bs-table-bg: #2b2b2b;
+  --bs-table-striped-bg: #2e2e2e;
+  --bs-table-striped-color: #ffffff;
+  --bs-table-hover-bg: #383838;
+  --bs-table-hover-color: #ffffff;
+}
+
+body.dark-mode .titulo {
+  color: #ffffff;
+}
+
+/* Override inline colors common in templates */
+body.dark-mode [style*="#002f5d" i] {
+  color: #ffffff !important;
+}
+
+body.dark-mode .text-dark {
+  color: #ffffff !important;
+}
+
+/* Button overrides for dark mode */
+body.dark-mode .btn-outline-dark,
+body.dark-mode .btn-outline-secondary {
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+body.dark-mode .btn-outline-dark:hover,
+body.dark-mode .btn-outline-secondary:hover {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+/* Table grid styles */
+body.dark-mode table {
+  color: #ffffff;
+  background-color: #2e2e2e !important;
+  --bs-table-bg: #2e2e2e;
+  --bs-table-striped-bg: #2b2b2b;
+  --bs-table-striped-color: #ffffff;
+  --bs-table-hover-bg: #383838;
+  --bs-table-hover-color: #ffffff;
+  --bs-table-border-color: #555555;
+}
+
+body.dark-mode table thead {
+  background-color: #2b2b2b;
+  color: #ffffff;
+}
+
+body.dark-mode table tbody tr:hover {
+  background-color: #383838 !important;
+}
+
+/* Ensure Bootstrap table classes respect dark mode */
+body.dark-mode .table,
+body.dark-mode .table-hover tbody tr {
+  background-color: #2e2e2e !important;
+  color: #ffffff !important;
+}
+
+body.dark-mode .table-hover tbody tr:hover {
+  background-color: #383838 !important;
+}

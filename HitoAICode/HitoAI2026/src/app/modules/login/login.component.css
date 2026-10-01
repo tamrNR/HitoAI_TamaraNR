@@ -1,0 +1,61 @@
+.login-container {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 3rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.logo-unach {
+  width: 250px;
+  margin-bottom: 2rem;
+}
+
+.titulo {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: #002f5d;
+}
+
+body.dark-mode .titulo {
+  color: #ffffff;
+}
+
+.form-control {
+  height: 50px;
+  font-size: 1rem;
+  border-radius: 8px;
+}
+
+.btn-primary {
+  background-color: #0073e6;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-radius: 10px;
+}
+
+.logo-fain {
+  width: 250px;
+  margin-top: 3rem;
+}
+
+.toggle-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.toast { font-size: 1rem; }
+
+.theme-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+

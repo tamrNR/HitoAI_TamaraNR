@@ -1,0 +1,19 @@
+/* Estilos para las tarjetas de reportes */
+.report-card {
+  border-left: 4px solid #0d6efd;
+}
+
+body.dark-mode .report-card {
+  background-color: #2e2e2e;
+  color: #ffffff;
+}
+
+body.dark-mode .report-card .btn-outline-primary {
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+body.dark-mode .report-card .btn-outline-primary:hover {
+  background-color: #ffffff;
+  color: #000000;
+}

@@ -1,0 +1,175 @@
+<div class="sidebar p-3 d-flex flex-column">
+  <div class="text-white text-center mb-4 user-info">
+    <div class="user-avatar-wrapper">
+      <i class="bi bi-person-circle nav-icon"></i>
+    </div>
+    <div class="fw-bold user-name">{{ nombre }}</div>
+    <small class="user-role">{{ rol }}</small>
+  </div>
+
+  <ul class="nav flex-column gap-1">
+    <!-- ADMINISTRADOR -->
+<ng-container *ngIf="rol === 'Administrador'">
+  <li class="nav-item">
+    <a class="nav-link text-navbar"
+       routerLink="/admin"
+       routerLinkActive="active"
+       [routerLinkActiveOptions]="{ exact: true }">
+       <span class="nav-icon-wrapper"><i class="bi bi-house-door-fill nav-icon"></i></span>
+       <span class="nav-text">Inicio</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-navbar"
+       routerLink="/admin/carreras"
+       routerLinkActive="active">
+       <span class="nav-icon-wrapper"><i class="bi bi-mortarboard-fill nav-icon"></i></span>
+       <span class="nav-text">Carreras</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-navbar"
+       routerLink="/admin/asignaturas"
+       routerLinkActive="active">
+       <span class="nav-icon-wrapper"><i class="bi bi-book-fill nav-icon"></i></span>
+       <span class="nav-text">Asignaturas</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-navbar"
+       routerLink="/admin/usuarios"
+       routerLinkActive="active">
+       <span class="nav-icon-wrapper"><i class="bi bi-people-fill nav-icon"></i></span>
+       <span class="nav-text">Usuarios</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-navbar"
+       routerLink="/admin/contenidos"
+       routerLinkActive="active">
+       <span class="nav-icon-wrapper"><i class="bi bi-journal-bookmark-fill nav-icon"></i></span>
+       <span class="nav-text">Contenidos</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-navbar"
+       routerLink="/admin/ra"
+       routerLinkActive="active">
+       <span class="nav-icon-wrapper"><i class="bi bi-bar-chart-line-fill nav-icon"></i></span>
+       <span class="nav-text">Resultados De Aprendizaje</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-navbar"
+       routerLink="/admin/asignaturas-hito"
+       routerLinkActive="active">
+       <span class="nav-icon-wrapper"><i class="bi bi-clipboard-check-fill nav-icon"></i></span>
+       <span class="nav-text">Asignaturas Hito</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link text-navbar"
+       routerLink="/admin/analitica/general"
+       routerLinkActive="active">
+       <span class="nav-icon-wrapper"><i class="bi bi-graph-up-arrow nav-icon"></i></span>
+       <span class="nav-text">Análisis Competencias</span>
+    </a>
+  </li>
+</ng-container>
+
+
+    <!-- JEFE DE CARRERA -->
+    <ng-container *ngIf="rol === 'Jefe de Carrera'">
+      <li class="nav-item">
+        <a class="nav-link text-navbar"
+           routerLink="/jefe-carrera"
+           routerLinkActive="active"
+           [routerLinkActiveOptions]="{ exact: true }">
+           <span class="nav-icon-wrapper"><i class="bi bi-house-door-fill nav-icon"></i></span><span class="nav-text">Inicio</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-navbar"
+           routerLink="/admin/asignaturas"
+           routerLinkActive="active">
+           <span class="nav-icon-wrapper"><i class="bi bi-book-fill nav-icon"></i></span><span class="nav-text">Gestión de Asignaturas</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-navbar"
+           routerLink="/jefe-carrera/asignaturas"
+           routerLinkActive="active">
+           <span class="nav-icon-wrapper"><i class="bi bi-book-fill nav-icon"></i></span><span class="nav-text">Asignaturas Hito</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-navbar"
+           routerLink="/jefe-carrera/ra"
+           routerLinkActive="active">
+           <span class="nav-icon-wrapper"><i class="bi bi-bar-chart-line-fill nav-icon"></i></span><span class="nav-text">Resultados De Aprendizaje</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-navbar"
+           routerLink="/jefe-carrera/analitica/general"
+           routerLinkActive="active">
+           <span class="nav-icon-wrapper"><i class="bi bi-graph-up-arrow nav-icon"></i></span><span class="nav-text">Análisis Competencias</span></a>
+      </li>
+    </ng-container>
+
+    <!-- PROFESOR -->
+    <ng-container *ngIf="rol === 'Profesor'">
+      <li class="nav-item">
+        <a class="nav-link text-navbar"
+           routerLink="/profesor"
+           routerLinkActive="active"
+           [routerLinkActiveOptions]="{ exact: true }">
+           <span class="nav-icon-wrapper"><i class="bi bi-house-door-fill nav-icon"></i></span><span class="nav-text">Inicio</span></a>
+      </li>
+      <li class="nav-item">
+  <a class="nav-link text-navbar"
+     routerLink="/profesor/asignaturas"
+     routerLinkActive="active">
+     <span class="nav-icon-wrapper"><i class="bi bi-book-fill nav-icon"></i></span><span class="nav-text">Asignaturas Hito</span></a>
+</li>
+
+    </ng-container>
+
+    <!-- COMITÉ CURRICULAR -->
+    <ng-container *ngIf="rol === 'Comité Curricular'">
+      <li class="nav-item">
+        <a class="nav-link text-navbar"
+           routerLink="/comite"
+           routerLinkActive="active"
+           [routerLinkActiveOptions]="{ exact: true }">
+           <span class="nav-icon-wrapper"><i class="bi bi-house-door-fill nav-icon"></i></span><span class="nav-text">Inicio</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-navbar"
+           routerLink="/comite/ra"
+           routerLinkActive="active">
+           <span class="nav-icon-wrapper"><i class="bi bi-bar-chart-line-fill nav-icon"></i></span><span class="nav-text">Resultados De Aprendizaje</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-navbar"
+           routerLink="/comite/contenidos"
+           routerLinkActive="active">
+           <span class="nav-icon-wrapper"><i class="bi bi-journal-bookmark-fill nav-icon"></i></span><span class="nav-text">Contenidos</span></a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-navbar"
+           routerLink="/comite/analitica/general"
+           routerLinkActive="active">
+           <span class="nav-icon-wrapper"><i class="bi bi-graph-up-arrow nav-icon"></i></span><span class="nav-text">Análisis Competencias</span></a>
+      </li>
+    </ng-container>
+  </ul>
+
+  <!-- Botones inferiores -->
+  <div class="mt-auto pt-4">
+    <button type="button" class="btn btn-sm w-100 mb-2 btn-outline-light" (click)="toggleTheme()">
+      <span class="nav-icon-wrapper"><i class="bi nav-icon" [ngClass]="themeService.isDarkMode() ? 'bi-brightness-high' : 'bi-moon-fill'"></i></span>
+      <span class="btn-text">Modo Oscuro</span>
+    </button>
+    <button class="btn btn-sm w-100 text-white" style="background-color: #0051A2;" (click)="cerrarSesion()">
+      <span class="nav-icon-wrapper"><i class="bi bi-box-arrow-right nav-icon"></i></span>
+      <span class="btn-text">Cerrar Sesión</span>
+    </button>
+  </div>
+</div>

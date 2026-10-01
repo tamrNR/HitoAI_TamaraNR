@@ -1,0 +1,60 @@
+<div class="modal-header">
+  <h5 class="modal-title text-primary">
+    <i class="bi bi-person-plus me-2"></i> Crear Grupo de Evaluación
+  </h5>
+  <button type="button" class="btn-close" (click)="cancelar()"></button>
+</div>
+
+<div class="modal-body">
+  <div class="btn-group w-100 mb-3" role="group">
+    <button type="button" class="btn"
+            [class.btn-success]="modo === 'individual'"
+            [class.btn-outline-success]="modo !== 'individual'"
+            (click)="cambiarModo('individual')">
+      <i class="bi bi-person me-1"></i> Individual
+    </button>
+    <button type="button" class="btn"
+            [class.btn-success]="modo === 'grupo'"
+            [class.btn-outline-success]="modo !== 'grupo'"
+            (click)="cambiarModo('grupo')">
+      <i class="bi bi-people me-1"></i> Grupo
+    </button>
+  </div>
+
+  <p class="text-muted small mb-3">
+    <span *ngIf="modo === 'individual'">Selecciona el estudiante que será evaluado de forma individual.</span>
+    <span *ngIf="modo === 'grupo'">Selecciona dos o más estudiantes para conformar un grupo de evaluación.</span>
+  </p>
+
+  <div *ngIf="mensajeError" class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ mensajeError }}
+  </div>
+
+  <div *ngIf="estudiantes.length === 0" class="alert alert-info">No hay estudiantes inscritos.</div>
+
+  <ul class="list-group small">
+    <li *ngFor="let est of estudiantes"
+        class="list-group-item d-flex justify-content-between align-items-center"
+        [class.list-group-item-secondary]="bloqueados.has(est.ID_Estudiante)">
+      <div>
+        <input
+          [attr.type]="modo === 'individual' ? 'radio' : 'checkbox'"
+          name="seleccionEstudiante"
+          class="form-check-input me-2"
+          [disabled]="bloqueados.has(est.ID_Estudiante)"
+          [checked]="seleccionados.has(est.ID_Estudiante)"
+          (change)="toggleSeleccion(est.ID_Estudiante)"
+        />
+        {{ est.Nombre }} {{ est.Apellido }} <span class="text-muted">({{ est.ID_Estudiante | rutFormat }})</span>
+      </div>
+      <span *ngIf="bloqueados.has(est.ID_Estudiante)" class="badge bg-secondary">Ya asignado</span>
+    </li>
+  </ul>
+</div>
+
+<div class="modal-footer">
+  <button class="btn btn-success" (click)="confirmar()">
+    <i class="bi bi-check-circle me-1"></i> Confirmar
+  </button>
+  <button class="btn btn-secondary" (click)="cancelar()">Cancelar</button>
+</div>

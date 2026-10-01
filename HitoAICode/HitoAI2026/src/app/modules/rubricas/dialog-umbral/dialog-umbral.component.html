@@ -1,0 +1,47 @@
+<div class="modal-header">
+  <h5 class="modal-title d-flex align-items-center gap-2" style="color: #002F5D">
+    <i class="bi bi-sliders"></i> Umbral de Aprobación
+  </h5>
+  <button type="button" class="btn-close" (click)="cancelar()" [disabled]="bloqueado"></button>
+</div>
+
+<div class="modal-body position-relative">
+  <p class="text-muted mb-3">{{ nombreAsignatura }}</p>
+
+  <div class="mb-3">
+    <label class="form-label">Umbral (%)</label>
+    <input type="number" class="form-control" [(ngModel)]="umbral" name="umbral"
+           [disabled]="bloqueado" min="0" max="100" placeholder="Ej. 51" required />
+    <small class="text-muted">Porcentaje mínimo de logro considerado "aprobado" en los gráficos de análisis de esta asignatura.</small>
+  </div>
+</div>
+
+<div class="modal-footer" *ngIf="!mensajeExito">
+  <button class="btn btn-primary" (click)="guardar()" [disabled]="bloqueado">
+    <i class="bi bi-check-circle me-1"></i> Guardar
+  </button>
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">Cancelar</button>
+</div>
+
+<!-- TOAST ÉXITO -->
+<div *ngIf="mensajeExito && bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+  <div class="toast show text-bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ mensajeExito }}
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" (click)="cerrarToast()"></button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST ERROR -->
+<div *ngIf="mensajeError && !bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+  <div class="toast show text-bg-danger bg-opacity-75" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ mensajeError }}
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,141 @@
+<div class="modal-header">
+  <h5 class="modal-title d-flex align-items-center gap-2" style="color: #002F5D">
+    <i class="bi bi-person-badge-fill"></i>
+    {{
+      modo === 'crear'
+        ? 'Crear Competencia'
+        : modo === 'editar'
+        ? 'Editar Competencia'
+        : 'Ver Competencia'
+    }}
+  </h5>
+  <button type="button" class="btn-close" (click)="cancelar()" [disabled]="bloqueado"></button>
+</div>
+
+<div class="modal-body position-relative">
+  <form *ngIf="modo !== 'ver'">
+    <div class="mb-3">
+      <label class="form-label">ID Competencia</label>
+      <input
+        type="text"
+        class="form-control"
+        [(ngModel)]="competencia.ID_Competencia"
+        name="id"
+        [disabled]="bloqueado || modo !== 'crear'"
+        required
+      />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Nombre</label>
+      <input
+        type="text"
+        class="form-control"
+        [(ngModel)]="competencia.Nombre"
+        name="nombre"
+        [disabled]="bloqueado"
+        required
+      />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Descripción</label>
+      <textarea
+        class="form-control"
+        rows="3"
+        [(ngModel)]="competencia.Descripcion"
+        name="descripcion"
+        [disabled]="bloqueado"
+        required
+      ></textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Tipo</label>
+      <select class="form-select" [(ngModel)]="competencia.Tipo" name="tipo" [disabled]="bloqueado" required>
+        <option value="" disabled selected>Seleccione un tipo</option>
+        <option value="CP">CP - Profesional</option>
+        <option value="CG">CG - Genérica</option>
+        <option value="CS">CS - Sello</option>
+        <option value="CD">CD - Disciplinar</option>
+      </select>
+    </div>
+
+    <!-- Confirmación -->
+    <div *ngIf="accionConfirmada && !bloqueado" class="confirm-overlay shadow p-4 rounded border mt-3" style="background-color: #f9f9f9;">
+      <h5 class="mb-3 d-flex align-items-center gap-2">
+        <i
+          class="bi fs-4"
+          [ngClass]="{
+            'bi-exclamation-triangle-fill text-danger': accionConfirmada === 'eliminar',
+            'bi-check-circle-fill text-success': accionConfirmada === 'crear',
+            'bi-pencil-fill text-primary': accionConfirmada === 'actualizar'
+          }"
+        ></i>
+        Confirmar {{ accionConfirmada }}
+      </h5>
+
+      <p>¿Estás seguro de que deseas <strong>{{ accionConfirmada }}</strong> esta competencia?</p>
+
+      <div class="d-flex justify-content-end gap-2 mt-3">
+        <button class="btn btn-success btn-sm text-white" *ngIf="accionConfirmada === 'crear'" (click)="crear()">Sí, crear</button>
+        <button class="btn btn-primary btn-sm text-white" *ngIf="accionConfirmada === 'actualizar'" (click)="actualizar()">Sí, actualizar</button>
+        <button class="btn btn-danger btn-sm text-white" *ngIf="accionConfirmada === 'eliminar'" (click)="eliminar()">Sí, eliminar</button>
+        <button class="btn btn-outline-secondary btn-sm" (click)="cancelarConfirmacion()">Cancelar</button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Vista solo lectura -->
+  <div *ngIf="modo === 'ver'">
+    <p><strong>ID:</strong> {{ competencia.ID_Competencia }}</p>
+    <p><strong>Nombre:</strong> {{ competencia.Nombre }}</p>
+    <p><strong>Descripción:</strong> {{ competencia.Descripcion }}</p>
+    <p><strong>Tipo:</strong> {{ competencia.Tipo }}</p>
+  </div>
+
+  <!-- Toast éxito -->
+  <div *ngIf="mensajeExito && bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+    <div class="toast show text-bg-success" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="bi bi-check-circle-fill me-2"></i>{{ mensajeExito }}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" (click)="cerrarToast()"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast error -->
+  <div *ngIf="mensajeError && !bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+    <div class="toast show text-bg-danger bg-opacity-75" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ mensajeError }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="modal-footer d-flex justify-content-end gap-2" *ngIf="modo !== 'ver' && !mensajeExito && !accionConfirmada">
+  <button *ngIf="modo === 'crear'" class="btn btn-primary" (click)="crear()" [disabled]="bloqueado">
+    <i class="bi bi-plus-circle me-1"></i> Crear
+  </button>
+  <button *ngIf="modo === 'editar'" class="btn btn-success" (click)="actualizar()" [disabled]="bloqueado">
+    <i class="bi bi-pencil-square me-1"></i> Guardar
+  </button>
+  <button *ngIf="modo === 'editar'" class="btn btn-danger" (click)="eliminar()" [disabled]="bloqueado">
+    <i class="bi bi-trash3 me-1"></i> Eliminar
+  </button>
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">
+    <i class="bi bi-x-circle me-1"></i> Cancelar
+  </button>
+</div>
+
+<div class="modal-footer" *ngIf="modo === 'ver' || mensajeExito">
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">
+    <i class="bi bi-x-circle me-1"></i> Cerrar
+  </button>
+</div>

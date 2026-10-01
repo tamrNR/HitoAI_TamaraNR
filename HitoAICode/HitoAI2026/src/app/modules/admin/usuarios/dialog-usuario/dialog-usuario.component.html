@@ -1,0 +1,152 @@
+<div class="modal-header">
+  <h5 class="modal-title d-flex align-items-center gap-2" style="color: #002F5D">
+    <i class="bi bi-person-fill"></i>
+    {{
+      modo === 'crear'
+        ? 'Crear Usuario'
+        : modo === 'editar'
+        ? 'Editar Usuario'
+        : 'Ver Usuario'
+    }}
+  </h5>
+  <button type="button" class="btn-close" (click)="cancelar()" [disabled]="bloqueado"></button>
+</div>
+
+<div class="modal-body position-relative">
+  <form *ngIf="modo === 'crear'">
+    <div class="mb-3">
+      <label class="form-label">RUT</label>
+      <input type="text" class="form-control" [(ngModel)]="usuario.ID_Usuario" name="rut" [disabled]="bloqueado" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Nombre</label>
+      <input type="text" class="form-control" [(ngModel)]="usuario.Nombre" name="nombre" [disabled]="bloqueado" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Rol</label>
+      <select class="form-select" [(ngModel)]="usuario.Rol_ID_Rol" name="rol" [disabled]="bloqueado" required>
+        <option value="" disabled selected>Selecciona un rol</option>
+        <option *ngFor="let r of roles" [value]="r.ID_Rol">{{ r.Nombre }}</option>
+      </select>
+    </div>
+    <div class="mb-3 position-relative">
+      <label class="form-label">Clave</label>
+      <input [type]="mostrarClave ? 'text' : 'password'" class="form-control" [(ngModel)]="usuario.Clave" name="clave" [disabled]="bloqueado" required />
+
+      <button type="button" class="btn btn-outline-secondary btn-sm toggle-btn" (click)="mostrarClave = !mostrarClave">
+
+        <i class="bi" [ngClass]="mostrarClave ? 'bi-eye-slash' : 'bi-eye'"></i>
+      </button>
+    </div>
+  </form>
+
+  <div *ngIf="modo !== 'crear'">
+    <div class="mb-3">
+      <label class="form-label">RUT</label>
+      <input type="text" class="form-control" [value]="usuario.ID_Usuario | rutFormat" disabled />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Nombre</label>
+      <input type="text" class="form-control" [value]="usuario.Nombre" disabled />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Rol</label>
+      <input type="text" class="form-control" [value]="usuario.Rol" disabled />
+    </div>
+    <div *ngIf="modo === 'rol'" class="mb-3">
+      <label class="form-label">Nuevo rol</label>
+      <select class="form-select" [(ngModel)]="usuario.Rol_ID_Rol">
+        <option value="" disabled selected>Selecciona un rol</option>
+        <option *ngFor="let r of roles" [value]="r.ID_Rol">{{ r.Nombre }}</option>
+      </select>
+    </div>
+
+    <div *ngIf="modo === 'editar'">
+      <div class="mb-3 position-relative">
+        <label class="form-label">Nueva clave</label>
+        <input [type]="mostrarNueva ? 'text' : 'password'" class="form-control" [(ngModel)]="nuevaClave" />
+        <button type="button" class="btn btn-outline-secondary btn-sm toggle-btn" (click)="mostrarNueva = !mostrarNueva">
+          <i class="bi" [ngClass]="mostrarNueva ? 'bi-eye-slash' : 'bi-eye'"></i>
+        </button>
+      </div>
+      <div class="mb-3 position-relative">
+        <label class="form-label">Confirmar clave</label>
+        <input [type]="mostrarConfirmar ? 'text' : 'password'" class="form-control" [(ngModel)]="confirmar" />
+        <button type="button" class="btn btn-outline-secondary btn-sm toggle-btn" (click)="mostrarConfirmar = !mostrarConfirmar">
+          <i class="bi" [ngClass]="mostrarConfirmar ? 'bi-eye-slash' : 'bi-eye'"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmación -->
+  <div *ngIf="accionConfirmada && !bloqueado" class="confirm-overlay shadow p-4 rounded border mt-3" style="background-color: #f9f9f9;">
+    <h5 class="mb-3">
+      <i
+        class="bi"
+        [ngClass]="{
+          'bi-exclamation-triangle-fill text-danger': accionConfirmada === 'eliminar',
+          'bi-check-circle-fill': accionConfirmada === 'crear',
+          'bi-pencil-fill': accionConfirmada === 'actualizar' || accionConfirmada === 'rol'
+        }"
+      ></i>
+      Confirmar {{ accionConfirmada }}
+    </h5>
+
+    <p>¿Estás seguro de que deseas <strong>{{ accionConfirmada }}</strong> este usuario?</p>
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+      <button class="btn btn-success btn-sm text-white" *ngIf="accionConfirmada === 'crear'" (click)="crear()">Sí, crear</button>
+      <button class="btn btn-primary btn-sm text-white" *ngIf="accionConfirmada === 'actualizar'" (click)="renovarClave()">Sí, actualizar</button>
+      <button class="btn btn-info btn-sm text-white" *ngIf="accionConfirmada === 'rol'" (click)="cambiarRol()">Sí, actualizar</button>
+      <button class="btn btn-danger btn-sm text-white" *ngIf="accionConfirmada === 'eliminar'" (click)="eliminarUsuario()">Sí, eliminar</button>
+      <button class="btn btn-outline-secondary btn-sm" (click)="cancelarConfirmacion()">Cancelar</button>
+    </div>
+  </div>
+
+  <div *ngIf="mensajeError && !bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+    <div class="toast show text-bg-danger bg-opacity-75" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ mensajeError }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="mensajeExito && bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+    <div class="toast show text-bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="bi bi-check-circle-fill me-2"></i>{{ mensajeExito }}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" (click)="cerrarToast()"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="modal-footer" *ngIf="modo !== 'ver' && !mensajeExito && !accionConfirmada">
+  <button *ngIf="modo === 'crear'" class="btn btn-primary" (click)="crear()" [disabled]="bloqueado">
+    <i class="bi bi-plus-circle me-1"></i> Crear
+  </button>
+  <button *ngIf="modo === 'editar'" class="btn btn-success" (click)="renovarClave()" [disabled]="bloqueado">
+    <i class="bi bi-pencil-square me-1"></i> Guardar
+  </button>
+  <button *ngIf="modo === 'rol'" class="btn btn-info text-white" (click)="cambiarRol()" [disabled]="bloqueado">
+    <i class="bi bi-shuffle me-1"></i> Guardar
+  </button>
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">Cancelar</button>
+</div>
+
+<div class="modal-footer" *ngIf="modo === 'ver' && !mensajeExito && !accionConfirmada">
+  <button class="btn btn-danger" (click)="eliminarUsuario()" [disabled]="bloqueado">
+    <i class="bi bi-trash3-fill me-1"></i> Eliminar
+  </button>
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">Cerrar</button>
+</div>
+
+<div class="modal-footer" *ngIf="mensajeExito">
+  <button class="btn btn-secondary" (click)="cancelar()" [disabled]="bloqueado">Cerrar</button>
+</div>

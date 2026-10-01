@@ -1,0 +1,126 @@
+<div class="modal-header">
+  <h5 class="modal-title text-primary">
+    <i class="bi bi-clipboard-check me-2"></i> Evaluación Detalle
+  </h5>
+  <button type="button" class="btn-close" (click)="cancelar()"></button>
+</div>
+
+<!-- Contenedor con scroll solo en el cuerpo -->
+<div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+
+  <div class="d-flex justify-content-end mb-3">
+    <button class="btn btn-outline-success" (click)="abrirDialogGrupo()" [disabled]="bloqueado">
+      <i class="bi bi-people me-1"></i> Evaluar 
+    </button>
+  </div>
+
+  <!-- Grupos evaluados -->
+  <div class="mt-4">
+    <h6 class="fw-bold text-dark mb-3">
+      <i class="bi bi-people-fill me-1"></i> Evaluaciones
+    </h6>
+
+    <div *ngIf="grupos.length === 0" class="alert alert-info text-center">
+      Aún no hay evaluaciones.
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-3 g-3">
+      <div class="col" *ngFor="let grupo of grupos">
+
+        <div class="border rounded p-3 h-100 shadow-sm"
+             [ngClass]="esGrupoEvaluado(grupo) ? 'border-success bg-success bg-opacity-10' : 'border-secondary bg-white'">
+
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+            <strong *ngIf="grupo.estudiantes.length > 1">Grupo {{ grupo.numero }}</strong>
+            <strong *ngIf="grupo.estudiantes.length === 1">
+              {{ grupo.estudiantes[0].Nombre }} {{ grupo.estudiantes[0].Apellido }}
+            </strong>
+            <span *ngIf="grupo.estudiantes.length > 1" class="text-muted small ms-2">
+              Integrantes: {{ grupo.estudiantes.length }}
+            </span>
+            <span *ngIf="grupo.estudiantes.length === 1" class="badge bg-light text-dark border ms-2">
+              Individual
+            </span>
+            <span class="badge bg-primary ms-2">Nota: {{ grupo.nota }}</span>
+          </div>
+
+          <div class="d-flex gap-2 align-items-center">
+            <span *ngIf="esGrupoEvaluado(grupo)" class="badge bg-success bg-opacity-25 text-success">
+              <i class="bi bi-check-circle-fill me-1"></i> Evaluado
+            </span>
+
+            <div ngbDropdown container="body">
+              <button class="btn btn-outline-secondary btn-sm" ngbDropdownToggle>
+                <i class="bi bi-three-dots-vertical"></i>
+              </button>
+              <div ngbDropdownMenu>
+                <button class="dropdown-item" (click)="abrirRubrica(grupo, grupo.numero)">
+
+                  <i class="bi me-2" [ngClass]="{
+                    'bi-eye': esGrupoEvaluado(grupo),
+                    'bi-pencil-square': !esGrupoEvaluado(grupo)
+                  }"></i>
+
+                  {{ esGrupoEvaluado(grupo) ? 'Ver Rúbrica' : 'Evaluar' }}
+                </button>
+                <button *ngIf="!esGrupoEvaluado(grupo)" class="dropdown-item text-danger"
+                        (click)="confirmarDisolver(grupo.numero)"
+                        [disabled]="bloqueado || accionConfirmada === grupo.numero">
+                  <i class="bi bi-trash me-2"></i> Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <ul class="mt-2 mb-0" *ngIf="grupo.estudiantes.length > 1">
+          <li *ngFor="let est of grupo.estudiantes">
+            {{ est.Nombre }} {{ est.Apellido }}
+          </li>
+        </ul>
+
+        <!-- Confirmación -->
+        <div *ngIf="accionConfirmada === grupo.numero" class="confirm-overlay shadow-lg p-4 rounded mt-3">
+          <h6 class="mb-2 text-danger">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            Confirmar eliminación
+          </h6>
+          <p class="mb-3">¿Deseas <strong>Eliminar {{ grupo.numero }}</strong>?</p>
+          <div class="d-flex justify-content-end gap-2">
+            <button class="btn btn-danger btn-sm text-white" (click)="disolverGrupoConfirmado(grupo.numero)">
+              Sí, eliminar
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" (click)="cancelarConfirmacion()">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST ÉXITO -->
+<div *ngIf="mensajeExito && bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+  <div class="toast show text-bg-success">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-check-circle-fill me-2"></i> {{ mensajeExito }}
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" (click)="mensajeExito = ''; bloqueado = false;"></button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST ERROR -->
+<div *ngIf="mensajeError && !bloqueado" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+  <div class="toast show text-bg-danger bg-opacity-75">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-exclamation-octagon-fill me-2"></i> {{ mensajeError }}
+      </div>
+    </div>
+  </div>
+</div>

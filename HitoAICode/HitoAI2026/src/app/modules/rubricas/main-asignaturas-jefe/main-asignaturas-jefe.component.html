@@ -1,0 +1,36 @@
+<div class="main-layout">
+  <app-sidebar [rol]="rolUsuario"></app-sidebar>
+
+  <div class="main-content p-4" style="background-color: #f4f6fa; min-height: 100vh; margin-left: 70px;">
+    <h3 class="fw-bold mb-4" style="color: #002F5D;">
+      <i class="bi bi-book-half me-2"></i>Asignaturas de la Carrera
+    </h3>
+
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+      <div class="col" *ngFor="let a of asignaturas">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title text-primary">{{ a.Nombre }}</h5>
+            <p class="card-text mb-2">
+              <strong>ID:</strong> {{ a.ID_Asignatura }}<br>
+              <strong>Semestre:</strong> {{ a.Semestre }}<br>
+              <strong>Plan:</strong> {{ a.Plan_Academico }}<br>
+              <strong>Profesor:</strong> {{ a.Profesor }}
+            </p>
+            <div class="mt-auto d-flex gap-2">
+              <button class="btn btn-outline-info btn-sm" (click)="verAsignatura(a)">
+                <i class="bi bi-eye"></i> Ver
+              </button>
+              <button class="btn btn-outline-primary btn-sm" (click)="abrirContenidos(a)">
+                <i class="bi bi-journals"></i> Contenidos
+              </button>
+              <button class="btn btn-outline-warning btn-sm" (click)="abrirUmbral(a)">
+                <i class="bi bi-sliders"></i> Umbral
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

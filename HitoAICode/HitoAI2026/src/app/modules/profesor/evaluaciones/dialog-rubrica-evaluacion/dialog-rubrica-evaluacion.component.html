@@ -1,0 +1,108 @@
+<div class="modal-header">
+  <h5 class="modal-title text-primary">
+    <i class="bi bi-clipboard-check me-2"></i>
+    Evaluación del Grupo: {{ tituloGrupo }}
+  </h5>
+  <button type="button" class="btn-close" (click)="cancelar()"></button>
+</div>
+
+<div class="modal-body">
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle text-center">
+      <thead class="table-light">
+        <tr>
+          <th>Indicador</th>
+          <ng-container *ngIf="indicadores.length > 0 && criterios[indicadores[0].ID_Indicador]">
+            <th *ngFor="let c of criterios[indicadores[0].ID_Indicador]">
+              {{ c.Nombre }}<br>
+              <small>({{ c.R_Min }} - {{ c.R_Max }})</small>
+            </th>
+          </ng-container>
+          <th>Puntaje</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let i of indicadores">
+          <td class="text-start fw-bold">
+            {{ i.Descripcion }}<br>
+            <small class="text-muted">(Máx: {{ i.Puntaje_Max }})</small>
+          </td>
+          <ng-container *ngIf="criterios[i.ID_Indicador]">
+            <td *ngFor="let c of criterios[i.ID_Indicador]">
+              <div class="fw-normal">{{ c.Nombre }}</div>
+              <div class="text-muted small">({{ c.R_Min }} - {{ c.R_Max }})</div>
+            </td>
+          </ng-container>
+          <td>
+            <input type="number"
+                   class="form-control text-center"
+                   [(ngModel)]="puntajes[i.ID_Indicador]"
+                   [disabled]="modoSoloLectura || bloqueado"
+                   [min]="0"
+                   [max]="i.Puntaje_Max"
+                   [class.is-invalid]="puntajes[i.ID_Indicador] < 0 || puntajes[i.ID_Indicador] > i.Puntaje_Max" />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-3 text-end">
+    <strong class="me-3">Puntaje Obtenido: {{ calcularTotal() }}</strong>
+    <strong class="me-3">Puntaje Ideal: {{ calcularPuntajeIdeal() }}</strong>
+    <span class="badge bg-primary">Nota: {{ calcularNota() }}</span>
+  </div>
+
+  <div *ngIf="hayErroresDePuntaje()" class="alert alert-warning mt-3">
+    Algunos puntajes están fuera del rango permitido.
+  </div>
+
+  <!-- Confirmación flotante -->
+  <div *ngIf="mostrarConfirmacion && !bloqueado" class="confirm-overlay shadow-lg p-4 rounded">
+    <h5 class="mb-3 text-success">
+      <i class="bi bi-check-circle-fill me-2"></i> Confirmar Evaluación
+    </h5>
+    <p>¿Estás seguro de que deseas <strong>guardar</strong> los puntajes?</p>
+    <div class="d-flex justify-content-end gap-2">
+      <button class="btn btn-success btn-sm text-white" (click)="guardar()">Sí, guardar</button>
+      <button class="btn btn-outline-secondary btn-sm" (click)="cancelarConfirmacion()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Toast éxito -->
+  <div *ngIf="mensajeExito" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000;">
+    <div class="toast show text-bg-success" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="bi bi-check-circle-fill me-2"></i>{{ mensajeExito }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast error -->
+  <div *ngIf="mensajeError" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000;">
+    <div class="toast show text-bg-danger bg-opacity-75" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ mensajeError }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-footer">
+  <button class="btn btn-secondary" (click)="cancelar()">Cancelar</button>
+
+  <button *ngIf="modoSoloLectura" class="btn btn-primary" (click)="habilitarEdicion()">
+    <i class="bi bi-pencil-square me-1"></i> Editar
+  </button>
+
+  <button *ngIf="!modoSoloLectura"
+          class="btn btn-success"
+          (click)="confirmarGuardado()"
+          [disabled]="hayErroresDePuntaje() || bloqueado">
+    <i class="bi bi-check-circle me-1"></i> Guardar Puntajes
+  </button>
+</div>

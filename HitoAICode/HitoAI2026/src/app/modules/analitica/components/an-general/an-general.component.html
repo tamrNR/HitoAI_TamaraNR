@@ -1,0 +1,303 @@
+<div class="analitica-general-container">
+  <!-- Encabezado -->
+  <div class="header">
+    <h2>Análisis General de Competencias</h2>
+  </div>
+
+  <!-- Formulario de Filtros -->
+  <div class="filtros-card">
+    <h3><i class="bi bi-funnel"></i> Filtros de Búsqueda</h3>
+    
+    <form [formGroup]="filtrosForm" class="filtros-form">
+      <div class="filtros-grid">
+        <!-- Carrera -->
+        <div class="filtros-field">
+          <label for="carrera" class="form-label">Carrera *</label>
+          <select id="carrera" class="form-select" formControlName="carrera">
+            <option value="" hidden>Seleccione una carrera</option>
+            <option *ngFor="let carrera of carreras" [value]="carrera.id">
+              {{ carrera.nombre | sentenceCase }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Plan -->
+        <div class="filtros-field">
+          <label for="plan" class="form-label">Plan *</label>
+          <select id="plan" class="form-select" formControlName="plan">
+            <option value="" hidden>Seleccione un plan</option>
+            <option *ngFor="let plan of planes" [value]="plan.id">
+              {{ plan.nombre | sentenceCase }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Cohorte -->
+        <div class="filtros-field">
+          <label for="cohorte" class="form-label">Cohorte (Año) *</label>
+          <select id="cohorte" class="form-select" formControlName="cohorte">
+            <option value="" hidden>Seleccione cohorte</option>
+            <option *ngFor="let cohorte of cohortes" [value]="cohorte.id">
+              {{ cohorte.nombre | sentenceCase }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Semestre -->
+        <div class="filtros-field">
+          <label for="semestre" class="form-label">Semestre *</label>
+          <select id="semestre" class="form-select" formControlName="semestre">
+            <option value="" hidden>Seleccione semestre</option>
+            <option *ngFor="let semestre of semestres" [value]="semestre.id">
+              {{ semestre.nombre | sentenceCase }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Asignatura -->
+        <div class="filtros-field">
+          <label for="asignatura" class="form-label">Asignatura *</label>
+          <select id="asignatura" class="form-select" formControlName="asignatura">
+            <option value="" hidden>Seleccione asignatura</option>
+            <option *ngFor="let asignatura of asignaturas" [value]="asignatura.id">
+              {{ asignatura.nombre | sentenceCase }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Alumno -->
+        <div class="filtros-field">
+          <label for="alumno" class="form-label">Alumno *</label>
+          <select id="alumno" class="form-select" formControlName="alumno" (change)="onAlumnoChange($any($event.target).value)">
+            <option value="" hidden>Seleccionar alumno/curso</option>
+            <option [value]="ALUMNO_CURSO">📊 Curso completo (todos los alumnos)</option>
+            <option *ngFor="let alumno of alumnosCurso" [value]="alumno.idEstudiante">
+              {{ alumno.nombre | sentenceCase }} {{ alumno.apellido | sentenceCase }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Botones de acciones -->
+      <div class="d-flex justify-content-center gap-2">
+        <button 
+          type="button" 
+          class="btn btn-primary btn-lg" 
+          (click)="generarAnalisis()"
+          [disabled]="filtrosForm.invalid || cargando">
+          <i class="bi bi-bar-chart-fill"></i>
+          <span *ngIf="!cargando">Generar Análisis</span>
+          <span *ngIf="cargando">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            Cargando...
+          </span>
+        </button>
+
+        <button
+          *ngIf="dashboardChartsReady"
+          type="button"
+          class="btn btn-navy btn-lg"
+          (click)="descargarInforme()"
+          [disabled]="!canExportPdf || pdfLoading"
+          [attr.title]="!canExportPdf ? 'No hay gráficos disponibles para exportar' : null">
+          <i class="bi bi-download"></i>
+          <span *ngIf="!pdfLoading">Descargar informe</span>
+          <span *ngIf="pdfLoading">
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            Generando informe…
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Panel de advertencia cuando el curso está pendiente -->
+  <div *ngIf="warningActive" class="alert alert-warning my-3" role="alert">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    {{ warningMessage }}
+  </div>
+
+  <!-- Gráficos -->
+  <div class="graficos-section" *ngIf="mostrarGraficos">
+    <!-- Grid responsive: 1 columna en móvil, 2 en tablet, 4 en desktop -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      
+      <!-- Gráfico de Radar -->
+      <div class="card-grafico" (click)="irADetalleRadar()">
+        <div class="chart-header">
+          <h4><i class="bi bi-diagram-3"></i> {{ modoCursoActivo ? 'Competencias del Curso' : 'Competencias del Alumno' }}</h4>
+          <button class="btn-detalle" type="button">
+            Detalle
+          </button>
+        </div>
+        <div class="chart-wrapper">
+          <ng-container *ngIf="radarHasData; else radarEmptyTpl">
+            <canvas
+              baseChart
+              [data]="radarChartData"
+              type="radar"
+              [options]="radarChartOptions"
+              [plugins]="[umbralRadarPlugin]">
+            </canvas>
+          </ng-container>
+          <ng-template #radarEmptyTpl>
+            <div class="empty-state text-center py-4">
+              <i class="bi bi-emoji-neutral fs-3 d-block mb-2" aria-hidden="true"></i>
+              <div class="fw-semibold">{{ radarEmptyMessage }}</div>
+              <div class="text-muted small" *ngIf="radarError">{{ radarError }}</div>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+
+      <!-- Gráfico de Barras -->
+      <div class="card-grafico" (click)="irADetalleBarras()">
+        <div class="chart-header">
+          <h4><i class="bi bi-bar-chart-fill"></i> {{ modoCursoActivo ? 'Promedio del Curso' : 'Alumno vs Promedio' }}</h4>
+          <button class="btn-detalle" type="button">
+            Detalle
+          </button>
+        </div>
+        <div class="chart-wrapper">
+          <div style="position: relative; width: 100%; height: 160px; overflow: hidden;">
+            <canvas
+              baseChart
+              [data]="barChartData"
+              [options]="barChartOptionsMini"
+              [type]="'bar'"
+              role="img"
+              aria-label="Vista previa gráfico alumno vs promedio">
+            </canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráfico de Burbujas -->
+      <div class="card-grafico" (click)="irADetalleBurbujas()">
+        <div class="chart-header">
+          <h4><i class="bi bi-diagram-2"></i> Logro vs. Umbral</h4>
+          <button class="btn-detalle" type="button">
+            Detalle
+          </button>
+        </div>
+        <div class="chart-wrapper">
+          <canvas
+            baseChart
+            [data]="bubbleChartData"
+            [type]="bubbleChartType"
+            [options]="bubbleChartOptions">
+          </canvas>
+        </div>
+      </div>
+
+      <!-- Mapa de Calor (Heatmap) -->
+      <div class="card-grafico" (click)="irADetalleHeatmap()">
+        <div class="chart-header">
+          <h4><i class="bi bi-grid-3x3"></i> Mapa de Calor del Curso</h4>
+          <button class="btn-detalle" type="button">
+            Detalle
+          </button>
+        </div>
+        <div class="chart-wrapper heatmap-wrapper">
+          <ng-container *ngIf="heatmapHasData; else heatmapEmptyTpl">
+            <div class="heatmap-container">
+              <table class="heatmap-table">
+                <thead style="display: none;">
+                  <tr>
+                    <th class="heatmap-corner"></th>
+                    <th *ngFor="let comp of heatmapCompetencias" class="heatmap-header-cell">
+                      {{ comp }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of heatmapMatrix">
+                    <td class="heatmap-row-header" [title]="row.estudiante" style="display: none;">{{ row.estudiante }}</td>
+                    <td *ngFor="let comp of heatmapCompetencias" 
+                        class="heatmap-cell"
+                        [style.background-color]="getHeatmapColor(row[comp])"
+                        [style.color]="getTextColorForHeatmap(row[comp])">
+                      {{ getHeatmapCellText(row[comp]) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </ng-container>
+          <ng-template #heatmapEmptyTpl>
+            <div class="empty-state text-center py-4">
+              <i class="bi bi-emoji-neutral fs-3 d-block mb-2" aria-hidden="true"></i>
+              <div class="fw-semibold">No hay datos para el mapa de calor</div>
+              <div class="text-muted small" *ngIf="heatmapError">{{ heatmapError }}</div>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+
+      <!-- Gráfico de Líneas -->
+      <div class="card-grafico" *ngIf="!modoCursoActivo" (click)="irADetalleLineas()">
+        <div class="chart-header">
+          <h4><i class="bi bi-graph-up"></i> Trayectoria Académica por Competencia</h4>
+          <button class="btn-detalle" type="button">
+            Detalle
+          </button>
+        </div>
+        <div class="chart-wrapper">
+          <canvas
+            baseChart
+            [data]="lineChartData"
+            [type]="lineChartType"
+            [options]="lineChartOptions">
+          </canvas>
+        </div>
+      </div>
+
+      <!-- Gráfico de Evolución por Evaluación -->
+      <div class="card-grafico" (click)="irADetalleEvolucion()">
+        <div class="chart-header">
+          <h4><i class="bi bi-graph-up-arrow"></i> Evolución por Evaluación</h4>
+          <button class="btn-detalle" type="button">
+            Detalle
+          </button>
+        </div>
+        <div class="chart-wrapper">
+          <canvas
+            baseChart
+            [data]="evolucionChartData"
+            [type]="evolucionChartType"
+            [options]="evolucionChartOptions">
+          </canvas>
+        </div>
+      </div>
+
+      <!-- Distribución por Tramos -->
+      <div class="card-grafico" (click)="irADetalleTramos()">
+        <div class="chart-header">
+          <h4><i class="bi bi-table"></i> Competencias del Perfil de Egreso</h4>
+          <button class="btn-detalle" type="button">
+            Detalle
+          </button>
+        </div>
+        <div class="chart-wrapper" style="display:flex; align-items:center; justify-content:center; height:160px;">
+          <div *ngIf="distribucionTramosData?.length; else tramosEmptyTpl" class="text-center text-muted">
+            <i class="bi bi-table" style="font-size: 5.5rem; line-height: 1; color: #1B3B6F; opacity: 0.85;"></i>
+            <div class="small mt-2">{{ distribucionTramosData.length }} competencias clasificadas</div>
+          </div>
+          <ng-template #tramosEmptyTpl>
+            <div class="text-center text-muted">
+              <i class="bi bi-emoji-neutral" style="font-size: 5.5rem; line-height: 1;"></i>
+              <div class="small mt-2">Sin datos disponibles</div>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Mensaje si no hay datos -->
+  <div class="alert alert-info text-center" *ngIf="!mostrarGraficos && !cargando">
+    <i class="bi bi-info-circle me-2"></i>
+    Complete los filtros y presione "Generar Análisis" para visualizar los gráficos
+  </div>
+</div>

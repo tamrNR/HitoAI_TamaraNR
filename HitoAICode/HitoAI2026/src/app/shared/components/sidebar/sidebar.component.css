@@ -1,0 +1,190 @@
+/* Sidebar base styles */
+.sidebar {
+  width: 70px;
+  min-width: 70px;
+  max-width: 70px;
+  background-color: #001E3B;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  transition: width 0.3s ease, min-width 0.3s ease, max-width 0.3s ease;
+  z-index: 1000;
+}
+
+/* Hide scrollbar for WebKit browsers (Chrome, Edge, Safari) */
+.sidebar::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+/* Hide scrollbar for Firefox */
+.sidebar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar:hover {
+  width: 240px;
+  min-width: 240px;
+  max-width: 240px;
+}
+
+/* Uniform icon size */
+.nav-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Icon wrapper for centering */
+.nav-icon-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Hide text elements when compressed */
+.sidebar .user-name,
+.sidebar .user-role,
+.sidebar .nav-text,
+.sidebar .btn-text {
+  display: none;
+}
+
+/* Show text elements when expanded */
+.sidebar:hover .user-name,
+.sidebar:hover .user-role,
+.sidebar:hover .nav-text,
+.sidebar:hover .btn-text {
+  display: inline;
+}
+
+/* Center icons when compressed */
+.sidebar .text-navbar .nav-icon-wrapper,
+.sidebar button .nav-icon-wrapper {
+  margin: 0;
+}
+
+.sidebar:hover .text-navbar .nav-icon-wrapper,
+.sidebar:hover button .nav-icon-wrapper {
+  margin-right: 0.5rem;
+  width: auto;
+}
+
+/* Navigation links in compressed mode */
+.sidebar .text-navbar {
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  justify-content: center;
+  align-items: center;
+}
+
+.sidebar:hover .text-navbar {
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* Button styles for compressed state */
+.sidebar button {
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  justify-content: center;
+  align-items: center;
+}
+
+.sidebar:hover button {
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* Center user info icon when compressed */
+.sidebar .user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sidebar .user-avatar-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 64px;
+  height: 64px;
+}
+
+.sidebar:hover .user-info {
+  text-align: center;
+}
+
+/* Bottom buttons container */
+.sidebar .mt-auto {
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+/* Navigation link styles */
+.text-navbar {
+  color: #0073E6 !important;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: background-color 0.3s, color 0.3s;
+  border-radius: 4px;
+}
+
+.text-navbar:hover {
+  color: #ffffff !important;
+  background-color: #003366;
+}
+
+.text-navbar:focus {
+  outline: none;
+  background-color: #0051A2;
+  color: #ffffff !important;
+}
+
+.text-navbar.active {
+  background-color: #0062C4;
+  color: #ffffff !important;
+}
+
+/* Ensure active button icon stays centered in compressed mode */
+.sidebar .text-navbar.active .nav-icon-wrapper {
+  justify-content: center;
+}
+
+.sidebar:hover .text-navbar.active .nav-icon-wrapper {
+  justify-content: center;
+  margin-right: 0.5rem;
+}
+
+.btn-outline-light {
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+body.dark-mode .text-navbar {
+  color: #ffffff !important;
+}
+

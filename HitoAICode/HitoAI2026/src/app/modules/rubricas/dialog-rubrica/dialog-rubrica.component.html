@@ -1,0 +1,91 @@
+<div class="modal-header">
+  <h5 class="modal-title text-primary d-flex align-items-center gap-2">
+    <i class="bi bi-ui-checks-grid"></i> Rúbrica del Contenido
+  </h5>
+  <button type="button" class="btn-close" (click)="cancelar()"></button>
+</div>
+
+<div class="modal-body px-0 pt-0 pb-2">
+  <!-- Botón agregar -->
+  <div class="d-flex justify-content-between align-items-center p-3 bg-light border-bottom">
+    <button class="btn btn-success" (click)="agregarIndicador()">
+      <i class="bi bi-plus-circle me-1"></i> Agregar Indicador
+    </button>
+  </div>
+
+  <!-- Mensaje si no hay -->
+  <div *ngIf="indicadores.length === 0" class="alert alert-secondary text-center m-3">
+    No se ha definido una rúbrica aún para este contenido.
+  </div>
+
+  <!-- Tabla con scroll vertical -->
+  <div style="max-height: 60vh; overflow-y: auto;">
+    <table class="table table-bordered align-middle text-center mb-0">
+      <thead style="position: sticky; top: 0; background-color: #f8f9fa; z-index: 10;">
+        <tr>
+          <th class="text-start">Indicador</th>
+          <ng-container *ngFor="let col of columnasMaximas">
+            <th style="min-width: 200px;">Criterio {{ col + 1 }}</th>
+          </ng-container>
+          <th style="width: 90px;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let indicador of indicadores">
+          <!-- Indicador -->
+          <td class="text-start align-middle" style="max-width: 400px; word-break: break-word;">
+            <div class="fw-semibold text-dark" style="white-space: normal;">
+              {{ indicador.Descripcion }}
+            </div>
+            <div class="text-muted small">({{ indicador.Puntaje_Max }})</div>
+          </td>
+
+          <!-- Criterios -->
+          <ng-container *ngFor="let col of columnasMaximas">
+            <td class="align-middle" style="word-break: break-word;">
+              <ng-container *ngIf="indicador.Criterios[col]">
+                <div class="fw-semibold text-dark" style="white-space: normal;">
+                  {{ indicador.Criterios[col].Nombre }}
+                </div>
+                <div class="text-muted small">
+                  ({{ indicador.Criterios[col].R_Min }} - {{ indicador.Criterios[col].R_Max }})
+                </div>
+              </ng-container>
+              <ng-container *ngIf="!indicador.Criterios[col]">
+                <span class="text-muted">—</span>
+              </ng-container>
+            </td>
+          </ng-container>
+
+          <!-- Acciones -->
+          <td class="align-middle">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                <i class="bi bi-three-dots-vertical"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                  <a class="dropdown-item" (click)="verIndicador(indicador)">
+                    <i class="bi bi-eye me-1"></i> Ver
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" (click)="editarIndicador(indicador)">
+                    <i class="bi bi-pencil-square me-1"></i> Editar
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="modal-footer bg-white">
+  <button class="btn btn-secondary" (click)="cancelar()">
+    <i class="bi bi-x-circle me-1"></i> Cerrar
+  </button>
+</div>

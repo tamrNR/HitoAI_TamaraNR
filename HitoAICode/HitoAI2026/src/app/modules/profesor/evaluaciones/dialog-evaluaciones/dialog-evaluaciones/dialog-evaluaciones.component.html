@@ -1,0 +1,94 @@
+<div class="modal-header">
+  <h5 class="modal-title text-primary">
+    <i class="bi bi-journals me-2"></i> Evaluaciones de {{ asignatura?.Nombre }}
+  </h5>
+  <button type="button" class="btn-close" (click)="cerrar()"></button>
+</div>
+
+<div class="modal-body">
+  <div class="d-flex justify-content-end mb-3">
+    <button class="btn btn-outline-success" (click)="abrirDialogCrearEvaluacion()">
+      <i class="bi bi-plus-circle me-1"></i> Crear Evaluación
+    </button>
+  </div>
+
+  <div *ngIf="evaluaciones.length === 0" class="alert alert-info">
+    No hay evaluaciones registradas para esta asignatura.
+  </div>
+
+  <div class="row row-cols-1 row-cols-md-2 g-4" *ngIf="evaluaciones.length > 0">
+    <div class="col" *ngFor="let eva of evaluaciones">
+      <div class="card h-100 shadow-sm border-start border-4"
+           [ngClass]="eva.completada ? 'border-success bg-success bg-opacity-10' : 'border-primary'">
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <h5 class="card-title d-flex align-items-center"
+                [ngClass]="eva.completada ? 'text-success' : 'text-primary'">
+              <i class="bi bi-journal-text me-2"></i>{{ eva.Nombre }}
+            </h5>
+            <span *ngIf="eva.completada" class="badge bg-success bg-opacity-25 text-success">
+              <i class="bi bi-check-circle-fill me-1"></i> Completada
+            </span>
+          </div>
+          <p class="card-text mb-2">
+            <strong>Tipo:</strong> {{ eva.Tipo }}<br>
+            <strong>Instancia:</strong> {{ eva.N_Instancia }}<br>
+            <strong>Fecha:</strong> {{ eva.Fecha | date:'longDate' }}
+          </p>
+          <div class="mt-auto text-end" *ngIf="accionConfirmada !== eva.ID_Evaluacion">
+            <button class="btn btn-outline-primary btn-sm me-2" (click)="abrirDetalleEvaluacion(eva.ID_Evaluacion)">
+              <i class="bi bi-eye me-1"></i> Ver Detalle
+            </button>
+            <div class="dropdown d-inline">
+              <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-three-dots-vertical"></i>
+              </button>
+              <ul class="dropdown-menu">
+                <li><button class="dropdown-item" (click)="editar(eva)">
+                  <i class="bi bi-pencil me-2"></i>Editar
+                </button></li>
+                <li><button class="dropdown-item text-danger" (click)="confirmarEliminar(eva.ID_Evaluacion)">
+                  <i class="bi bi-trash me-2"></i>Eliminar
+                </button></li>
+              </ul>
+            </div>
+          </div>
+
+          <div *ngIf="accionConfirmada === eva.ID_Evaluacion" class="confirm-overlay shadow p-3 rounded mt-2">
+            <p class="mb-2">¿Eliminar esta evaluación?</p>
+            <div class="d-flex justify-content-end gap-2">
+              <button class="btn btn-danger btn-sm text-white" (click)="eliminarConfirmado(eva.ID_Evaluacion)">Sí</button>
+              <button class="btn btn-outline-secondary btn-sm" (click)="cancelarConfirmacion()">No</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Éxito -->
+<div *ngIf="mensajeExito" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+  <div class="toast show text-bg-success" role="alert">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ mensajeExito }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Error -->
+<div *ngIf="mensajeError" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+  <div class="toast show text-bg-danger bg-opacity-75" role="alert">
+    <div class="d-flex">
+      <div class="toast-body">
+        <i class="bi bi-exclamation-octagon-fill me-2"></i>{{ mensajeError }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-footer">
+  <button class="btn btn-secondary" (click)="cerrar()">Cerrar</button>
+</div>

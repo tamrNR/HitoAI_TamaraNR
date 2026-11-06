@@ -135,11 +135,12 @@ exports.generarReporteAnalitica = async (req, res) => {
       const chart = item?.chart || {};
       const context = sanitizarContexto(item?.context || {});
 
-      const metrics = computeMetrics({ chart, tipoGrafico, umbral: context.umbral ?? chart?.extra?.umbral });
+      // Sanitizar ANTES de metrics: en heatmap las etiquetas del eje X son nombres
+      // de alumnos y computed.brechas las copiaría a OpenAI y ai_analisis.
+      const chartPrivadoBase = sanitizarChart(chart, tipoGrafico);
+      const metrics = computeMetrics({ chart: chartPrivadoBase, tipoGrafico, umbral: context.umbral ?? chart?.extra?.umbral });
       const chartEnriched = { ...chart, computed: metrics };
-      // chartPrivado: sin nombres de alumnos (heatmap). Se usa para hash, OpenAI y ai_analisis.
-      // chartEnriched se conserva para el HTML del PDF (los nombres sí se muestran ahí).
-      const chartPrivado = sanitizarChart(chartEnriched, tipoGrafico);
+      const chartPrivado = { ...chartPrivadoBase, computed: metrics };
 
       const filtrosHash = buildFiltrosHash({ tipoGrafico, context, chart: chartPrivado, promptVersion });
 

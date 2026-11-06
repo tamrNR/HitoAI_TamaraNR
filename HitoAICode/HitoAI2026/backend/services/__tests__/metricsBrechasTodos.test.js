@@ -127,16 +127,55 @@ m = computeMetrics({
 assert.deepStrictEqual(m.brechas, []);
 console.log('✅ Caso 7 aprobado: burbujas sin serie logro => []\n');
 
-// Caso 8 — excluidos: heatmap y tramos no tienen brechas
-assert.deepStrictEqual(
-  computeMetrics({ chart: { x: { values: ['Ana'] }, series: [{ name: 'Logro', values: [50] }] }, tipoGrafico: 'heatmap', umbral: 75 }),
-  {}
-);
+// Caso 8 — tramos sigue excluido; heatmap SÍ tiene brechas (serie de logro promedio,
+// con etiquetas ya anonimizadas "Estudiante N" cuando viene del flujo /analisis/ia)
 assert.deepStrictEqual(
   computeMetrics({ chart: { x: { values: ['CD1'] }, series: [{ name: 'Satisfactorio %', values: [30] }] }, tipoGrafico: 'tramos', umbral: 75 }),
   {}
 );
-console.log('✅ Caso 8 aprobado: heatmap y tramos excluidos\n');
+m = computeMetrics({
+  chart: {
+    x: { values: ['TIS800', 'Estudiante 1', 'Estudiante 2'] },
+    series: [{ name: 'Logro Promedio (%)', values: [72, 80, 65] }]
+  },
+  tipoGrafico: 'heatmap',
+  umbral: 75
+});
+assert.deepStrictEqual(m.brechas, [
+  { serie: 'Logro Promedio (%)', etiqueta: 'TIS800', brecha: 3 },
+  { serie: 'Logro Promedio (%)', etiqueta: 'Estudiante 1', brecha: -5 },
+  { serie: 'Logro Promedio (%)', etiqueta: 'Estudiante 2', brecha: 10 }
+]);
+console.log('✅ Caso 8 aprobado: tramos excluido, heatmap con brechas y etiquetas anonimizadas\n');
+
+// Caso 8b — barras modo curso: '% Alumnos que cumplen umbral' NO es logro => sin brechas;
+// solo las series de logro ('Alumno', 'Promedio General') generan brecha
+m = computeMetrics({
+  chart: {
+    x: { values: ['CD1', 'CD2'] },
+    series: [{ name: '% Alumnos que cumplen umbral', values: [40, 60] }]
+  },
+  tipoGrafico: 'barras',
+  umbral: 52
+});
+assert.deepStrictEqual(m.brechas, []);
+m = computeMetrics({
+  chart: {
+    x: { values: ['CD1'] },
+    series: [
+      { name: '% Alumnos que cumplen umbral', values: [40] },
+      { name: 'Alumno', values: [50] },
+      { name: 'Promedio General', values: [70] }
+    ]
+  },
+  tipoGrafico: 'barras',
+  umbral: 52
+});
+assert.deepStrictEqual(m.brechas, [
+  { serie: 'Alumno', etiqueta: 'CD1', brecha: 2 },
+  { serie: 'Promedio General', etiqueta: 'CD1', brecha: -18 }
+]);
+console.log('✅ Caso 8b aprobado: barras curso sin brecha, barras alumno solo series de logro\n');
 
 // Caso 9 — umbral ausente/no numérico => [] en tipos cubiertos
 assert.deepStrictEqual(

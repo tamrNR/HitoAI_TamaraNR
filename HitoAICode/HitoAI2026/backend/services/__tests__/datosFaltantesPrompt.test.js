@@ -53,4 +53,24 @@ for (const frase of [
 }
 console.log('✅ Caso 4 aprobado: regla 7 con instrucciones de brechas positivas/negativas\n');
 
+// Caso 5 — reglas 8 y 9: no calcular brechas por cuenta propia; tramos no es logro
+for (const frase of [
+  'Nunca calcules restas, diferencias ni brechas por tu cuenta',
+  'Si chart.computed.brechas no existe, no cites brechas',
+  'porcentajes de estudiantes por nivel',
+  'no logro'
+]) {
+  assert.ok(sistema.includes(frase), `El prompt debe incluir: ${frase}`);
+}
+console.log('✅ Caso 5 aprobado: reglas 8 y 9 presentes en el prompt\n');
+
+// Caso 6 — regla 10: '% Alumnos que cumplen umbral' no es logro
+for (const frase of [
+  'porcentaje de estudiantes y no un logro',
+  'el N % de los alumnos cumple el umbral'
+]) {
+  assert.ok(sistema.includes(frase), `La regla 10 debe incluir: ${frase}`);
+}
+console.log('✅ Caso 6 aprobado: regla 10 presente en el prompt\n');
+
 console.log('PU-11 APROBADA: los datos faltantes se tratan como "No disponible" y el prompt incluye las reglas.');

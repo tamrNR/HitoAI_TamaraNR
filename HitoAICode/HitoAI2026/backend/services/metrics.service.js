@@ -106,7 +106,10 @@ function computeMetricsForBubbles(chart) {
 // Cubiertos: radar, barras, lineas, evolucion (eje X = competencia/semestre/evaluación)
 // y burbujas (eje de logro = serie "Logro"). Excluidos: heatmap (eje = personas)
 // y tramos (series = distribución por tramo, no % de logro).
-const TIPOS_CON_BRECHAS = new Set(['radar', 'barras', 'lineas', 'evolucion', 'burbujas']);
+const TIPOS_CON_BRECHAS = new Set(['radar', 'barras', 'lineas', 'evolucion', 'burbujas', 'heatmap']);
+// Barras modo curso envía '% Alumnos que cumplen umbral' (% de alumnos, no logro):
+// solo estas series generan brecha vs umbral.
+const SERIES_LOGRO_BARRAS = new Set(['alumno', 'promedio general', 'promedio']);
 const MAX_BRECHAS_PERIODO = 120;
 
 function calcularBrechas(chart, tipoGrafico, umbral) {
@@ -140,7 +143,10 @@ function calcularBrechas(chart, tipoGrafico, umbral) {
     return out;
   }
 
-  series.forEach(pushSerie);
+  const seriesLogro = tipoGrafico === 'barras'
+    ? series.filter(s => SERIES_LOGRO_BARRAS.has(String(s?.name || '').trim().toLowerCase()))
+    : series;
+  seriesLogro.forEach(pushSerie);
   if (esPeriodo) {
     out.sort((a, b) => b.brecha - a.brecha);
     return out.slice(0, MAX_BRECHAS_PERIODO);
@@ -176,7 +182,7 @@ function computeMetrics({ chart, tipoGrafico, umbral }) {
       if (sd.length) metrics.sinDatos = sd;
       return metrics;
     }
-    if (tipoGrafico === 'lineas' || tipoGrafico === 'evolucion') {
+    if (tipoGrafico === 'lineas' || tipoGrafico === 'evolucion' || tipoGrafico === 'heatmap') {
       const out = { brechas: calcularBrechas(chart, tipoGrafico, umbral) };
       const sd = calcularSinDatos(chart);
       if (sd.length) out.sinDatos = sd;

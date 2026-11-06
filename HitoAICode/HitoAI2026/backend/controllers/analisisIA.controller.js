@@ -42,7 +42,7 @@ async function generarAnalisisIA(req, res) {
       else tipoGrafico = 'barras';
     }
 
-    const promptVersion = 'v6';
+    const promptVersion = 'v8';
 
     // Eliminar datos personales del alumno antes de hash, OpenAI y ai_analisis
     const contextSanitizado = sanitizarContexto(context || {});
@@ -154,7 +154,7 @@ async function generarAnalisisIA(req, res) {
         else if (Array.isArray(chart?.series) && chart.series.length >= 2) tipoGrafico = 'barras';
         else tipoGrafico = 'barras';
       }
-      const promptVersion = 'v6';
+      const promptVersion = 'v8';
       const chart = sanitizarChart(body.chart || {}, tipoGrafico);
       const metrics = computeMetrics({ chart, tipoGrafico, umbral: context.umbral });
       const chartEnriched = { ...chart, computed: metrics };

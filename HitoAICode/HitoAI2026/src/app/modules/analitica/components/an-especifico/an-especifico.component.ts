@@ -1113,6 +1113,7 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
         this.analiticaService.guardarDatosGraficos('radar', {
           competencia: this.radarChartData,
           fase: this.radarFaseChartData,
+          sinDatos: this.radarSinDatosFlags,
           modoCurso: filtrosParaBackend.alumno === this.ALUMNO_CURSO
         });
         this.mostrarGrafico = true;

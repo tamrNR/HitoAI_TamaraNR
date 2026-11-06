@@ -41,14 +41,14 @@ assert.strictEqual(s2.modo, 'curso');
 assert.strictEqual(s2.asignatura, 'TIS800');
 console.log('✅ Caso 2 aprobado: sin alumno => modo curso\n');
 
-// Caso 3 — claves que CONTIENEN "alumno" o "rut", incluso anidadas
+// Caso 3 — claves exactas de la lista sensible, incluso anidadas
 const s3 = sanitizarContexto({
   asignatura: 'TIS800',
   filtros: { rutAlumno: '20.111.222-3', nombreCompleto: 'Luis Soto', carreraNombre: 'Derecho' },
   detalle: [{ idEstudiante: 7, etiqueta: 'parcial' }]
 });
-assert.ok(!('rutAlumno' in s3.filtros), 'rutAlumno debe eliminarse');
-assert.ok('nombreCompleto' in s3.filtros, 'nombreCompleto se conserva (no es clave exacta ni contiene alumno/rut)');
+assert.ok(!('rutAlumno' in s3.filtros), 'rutAlumno debe eliminarse (clave exacta en la lista)');
+assert.ok(!('nombreCompleto' in s3.filtros), 'nombreCompleto debe eliminarse (clave exacta en la lista)');
 assert.strictEqual(s3.filtros.carreraNombre, 'Derecho');
 assert.ok(!('idEstudiante' in s3.detalle[0]), 'idEstudiante anidado debe eliminarse');
 assert.strictEqual(s3.detalle[0].etiqueta, 'parcial');
@@ -60,5 +60,18 @@ assert.strictEqual(ctxIndividual.rut, '12.345.678-9');
 const s4 = sanitizarContexto(s1);
 assert.strictEqual(s4.modo, 'individual', 'Re-sanitizar no debe degradar modo individual a curso');
 console.log('✅ Caso 4 aprobado: no muta el original y modo individual es estable\n');
+
+// Caso 5 — claves legítimas que CONTIENEN alumno/rut se conservan;
+// variantes en mayúsculas de la lista sí se eliminan
+const s5 = sanitizarContexto({
+  ruta: '/tmp/x', nAlumnos: 30, totalAlumnos: 30,
+  Alumno: '20268128K', RUT: '12.345.678-9'
+});
+assert.strictEqual(s5.ruta, '/tmp/x');
+assert.strictEqual(s5.nAlumnos, 30);
+assert.strictEqual(s5.totalAlumnos, 30);
+assert.ok(!('Alumno' in s5), 'Alumno (mayúscula) debe eliminarse');
+assert.ok(!('RUT' in s5), 'RUT (mayúscula) debe eliminarse');
+console.log('✅ Caso 5 aprobado: claves legítimas conservadas, variantes en mayúsculas eliminadas\n');
 
 console.log('PU-12 APROBADA: sanitizarContexto elimina nombre, RUT e identificadores del alumno.');

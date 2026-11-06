@@ -2,12 +2,18 @@
 // Elimina datos personales del alumno (nombre, RUT, id) antes de enviar
 // el contexto a OpenAI o guardarlo en ai_analisis.
 
-const CLAVES_EXACTAS = new Set(['nombre', 'apellido', 'idestudiante']);
-const CLAVES_INDIVIDUAL = ['alumno', 'alumnoNombre', 'idEstudiante'];
+// Coincidencia exacta sin mayúsculas. NO usar subcadena: borraría
+// claves legítimas como 'ruta', 'nAlumnos' o 'totalAlumnos'.
+const CLAVES_SENSIBLES = new Set([
+  'alumno', 'alumnonombre', 'nombre', 'apellido', 'rut',
+  'idestudiante', 'estudiante', 'nombreestudiante',
+  'rutalumno', 'rutestudiante', 'nombrecompleto', 'nombrealumno',
+  'idalumno', 'rutdelalumno', 'run', 'dni'
+]);
+const CLAVES_INDIVIDUAL = ['alumno', 'alumnoNombre', 'idEstudiante', 'estudiante', 'nombreEstudiante'];
 
 function esClaveSensible(key) {
-  const k = String(key).toLowerCase();
-  return CLAVES_EXACTAS.has(k) || k.includes('alumno') || k.includes('rut');
+  return CLAVES_SENSIBLES.has(String(key).toLowerCase());
 }
 
 function limpiar(valor) {

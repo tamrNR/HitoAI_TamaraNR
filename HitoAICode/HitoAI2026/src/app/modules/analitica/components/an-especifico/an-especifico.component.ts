@@ -12,6 +12,7 @@ import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartData, ChartType, Chart } from 'chart.js';
 import { forkJoin } from 'rxjs';
 import { AnaliticaService } from '../../services/analitica.service';
+import { recolectarFlagsSinDatos, aplicarFlagsSinDatos } from '../../utils/sin-datos-flags';
 
 @Component({
   selector: 'app-an-especifico',
@@ -94,7 +95,14 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
   mostrarGrafico = false;
   cargando = false;
   radarSinDatos: boolean = false;
+  radarSinDatosFlags: boolean[] = [];
   mensajeSinDatos: string = '';
+  barPromedioSinDatosFlags: boolean[] = [];
+  barSinDatosFlags: boolean[] = [];
+  // Claves 'competencia|Semestre N' / 'competencia|NombreEvaluacion' sin evaluaciones (evaluados = 0)
+  lineasSinDatos = new Set<string>();
+  evolucionSinDatos = new Set<string>();
+  evolucionEvalIds: any[] = [];
 
   carreras: any[] = [];
   planes: any[] = [];
@@ -752,6 +760,7 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
   private aplicarDatosGrafico(datos: any): void {
     if (this.tipoGrafico === 'radar') {
       if (datos?.competencia && datos?.fase) {
+        this.radarSinDatosFlags = datos.sinDatos ?? [];
         // Crear nuevas referencias para forzar detección de cambios en Chart.js
         this.radarChartData = {
           labels:   [...(datos.competencia.labels   || [])],
@@ -765,21 +774,28 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
         this.modoCursoActivo = !!datos.modoCurso;
         this.cdr.detectChanges();  // ← forzar actualización
       } else if (datos?.labels) {
+        this.radarSinDatosFlags = datos.sinDatos ?? [];
         this.radarChartData   = datos;
         this._pendingFaseLoad = true;
       }
     } else if (this.tipoGrafico === 'barras') {
       if (datos?.chartData) {
+        this.barSinDatosFlags = datos.sinDatos ?? [];
+        this.barPromedioSinDatosFlags = datos.sinDatosPromedio ?? [];
         this.barChartData = datos.chartData;
         this.barrasModoCurso = !!datos.modoCurso;
         this.barrasCursoCounts = datos.counts ?? [];
       } else if (datos?.labels && Array.isArray(datos?.datasets)) {
         const cursoDataset = datos.datasets.find((d: any) => d.label === '% Alumnos que cumplen umbral');
         if (cursoDataset) {
+          this.barSinDatosFlags = datos.sinDatos ?? [];
+          this.barPromedioSinDatosFlags = datos.sinDatosPromedio ?? [];
           this.barChartData = this.construirBarChartDataCurso(datos.labels, cursoDataset.data ?? []);
           this.barrasModoCurso = true;
           this.barrasCursoCounts = [];
         } else {
+          this.barSinDatosFlags = datos.sinDatos ?? [];
+          this.barPromedioSinDatosFlags = datos.sinDatosPromedio ?? [];
           const promedioValues = datos.datasets.find((d: any) => d.label === 'Promedio General')?.data ?? [];
           const alumnoValues = datos.datasets.find((d: any) => d.label === 'Alumno')?.data ?? [];
           this.barChartData = this.construirBarChartData(datos.labels, promedioValues, alumnoValues);
@@ -787,6 +803,8 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
           this.barrasCursoCounts = [];
         }
       } else {
+        this.barSinDatosFlags = datos.sinDatos ?? [];
+        this.barPromedioSinDatosFlags = datos.sinDatosPromedio ?? [];
         this.barChartData = datos;
       }
       this.modoCursoActivo = this.barrasModoCurso;
@@ -810,7 +828,7 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
       this.processHeatmapDataCurso(datos);
     } else if (this.tipoGrafico === 'lineas') {
       if (Array.isArray(datos)) { this.buildLineChart(datos); }
-      else { this.lineChartData = datos; }
+      else { this.lineChartData = datos; this.lineasSinDatos = new Set(); }
       this.cdr.detectChanges();
     } else if (this.tipoGrafico === 'evolucion') {
       if (Array.isArray(datos)) {
@@ -818,6 +836,8 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
         this.buildEvolucionChart(datos);
       } else {
         this.evolucionChartData = datos;
+        this.evolucionSinDatos = new Set();
+        this.evolucionEvalIds = [];
       }
       this.cdr.detectChanges();
     } else if (this.tipoGrafico === 'tramos') {
@@ -893,6 +913,8 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
 
           if (data.modo === 'curso') {
             const cursoValues = data.series?.[0]?.values ?? [];
+            this.barSinDatosFlags = data.sinDatos ?? [];
+            this.barPromedioSinDatosFlags = [];
             this.barChartData = this.construirBarChartDataCurso(labels, cursoValues);
             this.barrasModoCurso = true;
             const numCumple = data.extra?.numCumple ?? [];
@@ -904,6 +926,8 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
           } else {
             const promedioValues = data.series?.find((s: any) => s.name === 'Promedio General')?.values ?? [];
             const alumnoValues   = data.series?.find((s: any) => s.name === 'Alumno')?.values ?? [];
+            this.barSinDatosFlags = data.sinDatos ?? [];
+            this.barPromedioSinDatosFlags = data.sinDatosPromedio ?? [];
             this.barChartData = this.construirBarChartData(labels, promedioValues, alumnoValues);
             this.barrasModoCurso = false;
             this.barrasCursoCounts = [];
@@ -912,7 +936,9 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
           this.analiticaService.guardarDatosGraficos('barras', {
             chartData: this.barChartData,
             modoCurso: this.barrasModoCurso,
-            counts: this.barrasCursoCounts
+            counts: this.barrasCursoCounts,
+            sinDatos: this.barSinDatosFlags,
+            sinDatosPromedio: this.barPromedioSinDatosFlags
           });
           this.mostrarGrafico = true;
           this.cargando = false;
@@ -1054,6 +1080,7 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
         }
         this.radarSinDatos = false;
 
+        this.radarSinDatosFlags = competencia.map((d: any) => !!d.sinDatos);
         // Radar competencia (izquierda)
         this.radarChartData = {
           labels: competencia.map((d: any) => d.nombre),
@@ -1300,6 +1327,7 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
 
   private buildLineChart(data: any[]): void {
     const items = Array.isArray(data) ? data : [];
+    this.lineasSinDatos = new Set();
     if (!items.length) { this.lineChartData = { labels: [], datasets: [] }; return; }
 
     // Eje X: semestres únicos ordenados
@@ -1315,6 +1343,8 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
 
     // Mapa: competencia|semestre → logro
     const logroMap = new Map<string, number>();
+    this.lineasSinDatos = recolectarFlagsSinDatos(
+      items, d => d.competencia, d => `Semestre ${Number(d.semestre)}`);
     items.forEach((d: any) => {
       const key = `${(d.competencia as string).trim()}|${Number(d.semestre)}`;
       logroMap.set(key, parseFloat(d.logro));
@@ -1352,6 +1382,8 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
 
   private buildEvolucionChart(data: any[]): void {
     const items = Array.isArray(data) ? data : [];
+    this.evolucionSinDatos = new Set();
+    this.evolucionEvalIds = [];
     if (!items.length) { this.evolucionChartData = { labels: [], datasets: [] }; return; }
 
     const evaluacionesOrdenadas = [...new Map(
@@ -1360,6 +1392,10 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
 
     const labels = evaluacionesOrdenadas.map(e => e.nombre);
     const competencias = [...new Set(items.map((d: any) => (d.competencia as string).trim()))].sort();
+    this.evolucionEvalIds = evaluacionesOrdenadas.map(e => e.id);
+    // Flags por evaluacionId: a prueba de nombres de evaluación duplicados ("print" ×3)
+    this.evolucionSinDatos = recolectarFlagsSinDatos(
+      items, d => d.competencia, d => d.evaluacionId);
 
     const logroMap = new Map<string, number>();
     items.forEach((d: any) => {
@@ -1420,7 +1456,8 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
       plan: raw.plan,           planNombre: planObj?.nombre,
       asignatura: raw.asignatura, asignaturaNombre: asignaturaObj?.nombre,
       cohorte: raw.cohorte, alumno: raw.alumno, alumnoNombre: alumnoObj?.nombre,
-      semestre: raw.semestre, semestreNombre: semestreObj?.nombre
+      semestre: raw.semestre, semestreNombre: semestreObj?.nombre,
+      umbral: this.umbralActual
     };
 
     let payloadChart: any = { chartTitle: this.tituloGrafico };
@@ -1430,24 +1467,61 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
         chartTitle: 'Radar: Competencias y Fases del Alumno',
         x: { label: 'Competencias', values: this.radarChartData.labels },
         series: this.radarChartData.datasets.map((ds: any) => ({
-          name: ds.label || 'Serie', unit: '%', values: Array.isArray(ds.data) ? ds.data : []
+          name: ds.label || 'Serie', 
+          unit: '%', 
+          values: Array.isArray(ds.data) 
+            ? ds.data.map((v: any, i: number) => {
+                // Usar radarSinDatosFlags si existe y coincide en largo
+                if (this.radarSinDatosFlags?.length === ds.data.length && this.radarSinDatosFlags[i]) {
+                  return null;
+                }
+                return v;
+              })
+            : []
         }))
       };
     } else if (this.tipoGrafico === 'barras' && this.barChartData?.labels && this.barChartData?.datasets) {
       payloadChart = {
         chartTitle: 'Barras: Alumno vs Promedio',
         x: { label: 'Competencias', values: this.barChartData.labels },
-        series: this.barChartData.datasets.map((ds: any) => ({
-          name: ds.label || 'Serie', unit: '%', values: Array.isArray(ds.data) ? ds.data : []
-        }))
+        series: this.barChartData.datasets.map((ds: any, dsIndex: number) => {
+          // Usar barrasModoCurso (no modoCursoActivo que viene del radar)
+          if (this.barrasModoCurso && dsIndex === 0 && this.barSinDatosFlags?.length === ds.data.length) {
+            // Modo curso: aplicar banderas al único dataset (índice 0)
+            return {
+              name: ds.label || 'Serie',
+              unit: '%',
+              values: ds.data.map((v: any, i: number) => this.barSinDatosFlags[i] ? null : v)
+            };
+          } else if (!this.barrasModoCurso && ds.label === 'Alumno' && this.barSinDatosFlags?.length === ds.data.length) {
+            // Modo alumno: aplicar banderas solo al dataset 'Alumno'
+            return {
+              name: ds.label || 'Serie',
+              unit: '%',
+              values: ds.data.map((v: any, i: number) => this.barSinDatosFlags[i] ? null : v)
+            };
+          } else if (!this.barrasModoCurso && ds.label === 'Promedio General' && this.barPromedioSinDatosFlags?.length === ds.data.length) {
+            // Modo alumno: aplicar banderas al dataset 'Promedio General'
+            return {
+              name: ds.label || 'Serie',
+              unit: '%',
+              values: ds.data.map((v: any, i: number) => this.barPromedioSinDatosFlags[i] ? null : v)
+            };
+          }
+          return {
+            name: ds.label || 'Serie',
+            unit: '%',
+            values: Array.isArray(ds.data) ? ds.data : []
+          };
+        })
       };
     } else if (this.tipoGrafico === 'burbujas' && Array.isArray(this.bubbleRaw) && this.bubbleRaw.length) {
       payloadChart = {
         chartTitle: 'Burbujas: Logro vs. Distancia al Umbral',
         x: { label: 'Competencia', values: this.bubbleRaw.map((d: any) => d.competencia) },
         series: [
-          { name: 'Logro (%)',  unit: '%', values: this.bubbleRaw.map((d: any) => Number(d.x)) },
-          { name: 'Distancia al umbral (%)', unit: '%', values: this.bubbleRaw.map((d: any) => Number(d.y)) }
+          { name: 'Logro (%)',  unit: '%', values: this.bubbleRaw.map((d: any) => d.sinDatos ? null : Number(d.x)) },
+          { name: 'Distancia al umbral (%)', unit: '%', values: this.bubbleRaw.map((d: any) => d.sinDatos ? null : Number(d.y)) }
         ],
         extra: {
           cumpleUmbral: this.bubbleRaw.map((d: any) => ({ competencia: d.competencia, cumple: d.cumpleUmbral }))
@@ -1489,7 +1563,7 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
         series: Array.from(competenciaMap.entries()).map(([competencia, logros]) => ({
           name: competencia,
           unit: '%',
-          values: logros
+          values: aplicarFlagsSinDatos(logros, this.lineChartData.labels ?? [], competencia, this.lineasSinDatos)
         }))
       };
     } else if (this.tipoGrafico === 'evolucion' && this.evolucionChartData?.labels && this.evolucionChartData?.datasets) {
@@ -1503,7 +1577,7 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
         series: Array.from(competenciaMap.entries()).map(([competencia, logros]) => ({
           name: competencia,
           unit: '%',
-          values: logros
+          values: aplicarFlagsSinDatos(logros, this.evolucionEvalIds, competencia, this.evolucionSinDatos)
         }))
       };
     } else if (this.tipoGrafico === 'tramos' && this.distribucionTramosData?.length) {

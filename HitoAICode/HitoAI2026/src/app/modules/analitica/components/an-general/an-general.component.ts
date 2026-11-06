@@ -68,6 +68,9 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
 
   radarError: string | null = null;
   radarDataRaw: any[] = [];
+  radarSinDatosFlags: boolean[] = [];
+  barPromedioSinDatosFlags: boolean[] = [];
+  barSinDatosFlags: boolean[] = [];
   radarFaseDataRaw: any[] = [];
   radarHasData = false;
   radarEmptyMessage = 'No hay datos para el gráfico radar con los filtros seleccionados.';
@@ -654,6 +657,11 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
       this.radarHasData = (this.radarChartData?.datasets?.[0]?.data?.length || 0) > 0;
       this.barChartData = datosBarras?.chartData ?? datosBarras;
       this.modoCursoActivo = !!(datosBarras?.modoCurso);
+      this.barSinDatosFlags = datosBarras?.sinDatos ?? [];
+      this.barPromedioSinDatosFlags = datosBarras?.sinDatosPromedio ?? [];
+      if (this.modoCursoActivo) {
+        this.barPromedioSinDatosFlags = [];
+      }
 
       if (datosBurbujas) {
         // datosBurbujas puede ser el array raw o el ChartData ya construido
@@ -845,6 +853,7 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
         this.analiticaService.guardarDatosGraficos('radar', {
           competencia: this.radarChartData,
           fase: radarFaseData,
+          sinDatos: this.radarSinDatosFlags,
           modoCurso: filtrosBackend.alumno === this.ALUMNO_CURSO
         });
 
@@ -859,6 +868,8 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
 
             if (data.modo === 'curso') {
               const cursoValues = data.series?.[0]?.values ?? [];
+              this.barSinDatosFlags = data.sinDatos ?? [];
+              this.barPromedioSinDatosFlags = [];
               this.barChartData = {
                 labels: labels,
                 datasets: [
@@ -875,6 +886,8 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
             } else {
               const promedioValues = data.series?.find((s: any) => s.name === 'Promedio General')?.values ?? [];
               const alumnoValues   = data.series?.find((s: any) => s.name === 'Alumno')?.values ?? [];
+              this.barSinDatosFlags = data.sinDatos ?? [];
+              this.barPromedioSinDatosFlags = data.sinDatosPromedio ?? [];
 
               this.barChartData = {
                 labels: labels,
@@ -909,7 +922,9 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
             this.analiticaService.guardarDatosGraficos('barras', {
               chartData: this.barChartData,
               modoCurso: barrasModoCursoTmp,
-              counts: barrasCountsTmp
+              counts: barrasCountsTmp,
+              sinDatos: this.barSinDatosFlags,
+              sinDatosPromedio: this.barPromedioSinDatosFlags
             });
             this.cdr.detectChanges();
 
@@ -949,14 +964,14 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
                           this.cargarDistribucionTramos(filtrosBackend);
                         },
                         error: (err) => {
-                          console.error('[AnGeneral] ❌ Error líneas:', err);
+                          console.error('[AnGeneral] Error líneas:', err);
                           this.cargarDistribucionTramos(filtrosBackend);
                         }
                       });
                     }
                   },
                   error: (err) => {
-                    console.error('[AnGeneral] ❌ Error heatmap:', err);
+                    console.error('[AnGeneral] Error heatmap:', err);
                     this.heatmapError = err?.message || 'Error al cargar datos del heatmap';
                     // No bloquear la visualización de otros gráficos si falla el heatmap
                     setTimeout(() => {
@@ -969,7 +984,7 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
                 });
               },
               error: (err) => {
-                console.error('[AnGeneral] ❌ Error burbujas:', err);
+                console.error('[AnGeneral] Error burbujas:', err);
                 this.cargando = false;
                 setTimeout(() => {
                   this.mostrarGraficos = true; // Mostrar radar y barras aunque fallen burbujas
@@ -980,7 +995,7 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
             });
           },
           error: (err) => {
-            console.error('[AnGeneral] ❌ Error barras:', err);
+            console.error('[AnGeneral] Error barras:', err);
             this.cargando = false;
             alert('Error al cargar datos de barras.');
             this.cdr.detectChanges();
@@ -988,7 +1003,7 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
         });
       },
       error: (err: any) => {
-        console.error('[AnGeneral] ❌ Error radar:', err);
+        console.error('[AnGeneral] Error radar:', err);
         if (err?.status === 409 || err?.payload?.error === 'curso_pendiente') {
           this.mostrarAdvertencia(err?.payload?.mensaje || err?.message);
           return;
@@ -1026,11 +1041,19 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
       datosPorCompetencia.set(codigoCorto, Number(d.valor ?? 0));
     });
     
+    // Mapear sinDatos del backend por código de competencia
+    const sinDatosPorCompetencia = new Map<string, boolean>();
+    this.radarDataRaw.forEach(d => {
+      const codigoCorto = String(d.nombre).split('·')[0].trim();
+      sinDatosPorCompetencia.set(codigoCorto, !!d.sinDatos);
+    });
+    
     // Construir arrays para labels, data, y hasData en el orden institucional
     const labels: string[] = [];
     const dataArray: number[] = [];
     const hasData: boolean[] = [];
     const pointColors: string[] = [];
+    const sinDatosFlags: boolean[] = [];
     
     ejesInstitucionales.forEach(eje => {
       labels.push(eje);
@@ -1039,10 +1062,12 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
         dataArray.push(valor);
         hasData.push(true);
         pointColors.push(valor < this.umbralActual ? '#e53935' : '#0A3D91');
+        sinDatosFlags.push(sinDatosPorCompetencia.get(eje) || false);
       } else {
         dataArray.push(0); // Valor placeholder para mantener la forma del radar
         hasData.push(false);
         pointColors.push('#999999'); // Gris para ejes sin datos
+        sinDatosFlags.push(true); // Sin datos del backend = true
       }
     });
     
@@ -1063,6 +1088,7 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
     };
     this.radarHasDataByAxis = hasData; // Guardar metadata en el componente
     this.radarHasData = true; // Siempre true porque mostramos todos los ejes
+    this.radarSinDatosFlags = sinDatosFlags; // Guardar para usar en buildChartsPayload
   }
 
   private updateBarChartFromBackend(data: any): void {
@@ -1074,6 +1100,8 @@ export class AnGeneralComponent implements OnInit, OnDestroy, AfterViewInit {
     const labels = data.labels;
     const promedioValues = data.series.find((s: any) => s.name === 'Promedio General')?.values ?? [];
     const alumnoValues = data.series.find((s: any) => s.name === 'Alumno')?.values ?? [];
+    this.barSinDatosFlags = data.sinDatos ?? [];
+    this.barPromedioSinDatosFlags = data.sinDatosPromedio ?? [];
 
     this.barChartData = {
       labels: labels,

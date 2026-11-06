@@ -2,6 +2,8 @@ const { computeMetrics } = require('../services/metrics.service');
 const { buildFiltrosHash } = require('../utils/hash.util');
 const { findByHash, insertAnalisis } = require('../services/aiAnalisis.repository');
 const { generarResumenCriticoBatch } = require('../services/openai.service');
+const { sanitizarContexto } = require('../utils/sanitizarContexto');
+const { sanitizarChart } = require('../utils/sanitizarChart');
 const {
   generarGraficoRadar,
   generarGraficoBurbujas,
@@ -131,12 +133,15 @@ exports.generarReporteAnalitica = async (req, res) => {
       const id = String(item?.id || '');
       const tipoGrafico = String(item?.tipoGrafico || '').trim();
       const chart = item?.chart || {};
-      const context = item?.context || {};
+      const context = sanitizarContexto(item?.context || {});
 
-      const metrics = computeMetrics({ chart, tipoGrafico });
+      const metrics = computeMetrics({ chart, tipoGrafico, umbral: context.umbral ?? chart?.extra?.umbral });
       const chartEnriched = { ...chart, computed: metrics };
+      // chartPrivado: sin nombres de alumnos (heatmap). Se usa para hash, OpenAI y ai_analisis.
+      // chartEnriched se conserva para el HTML del PDF (los nombres sí se muestran ahí).
+      const chartPrivado = sanitizarChart(chartEnriched, tipoGrafico);
 
-      const filtrosHash = buildFiltrosHash({ tipoGrafico, context, chart: chartEnriched, promptVersion });
+      const filtrosHash = buildFiltrosHash({ tipoGrafico, context, chart: chartPrivado, promptVersion });
 
       try {
         const cached = await findByHash(tipoGrafico, filtrosHash);
@@ -159,7 +164,7 @@ exports.generarReporteAnalitica = async (req, res) => {
         console.warn('[ReporteExport] ⚠️ Error consultando caché:', e?.message || e);
       }
 
-      misses.push({ id, tipoGrafico, chart: chartEnriched, context, filtrosHash });
+      misses.push({ id, tipoGrafico, chart: chartEnriched, chartPrivado, context, filtrosHash });
     }));
     console.timeEnd('[Timing] 1-Consulta caché IA');
 
@@ -167,7 +172,7 @@ exports.generarReporteAnalitica = async (req, res) => {
     console.time('[Timing] 2-Llamada a OpenAI');
     let results = [];
     if (misses.length && process.env.OPENAI_API_KEY) {
-      const batchItems = misses.map(m => ({ id: m.id, chart: m.chart, context: m.context }));
+      const batchItems = misses.map(m => ({ id: m.id, chart: m.chartPrivado, context: m.context }));
       results = await generarResumenCriticoBatch(batchItems);
     }
     console.timeEnd('[Timing] 2-Llamada a OpenAI');
@@ -194,7 +199,7 @@ exports.generarReporteAnalitica = async (req, res) => {
           tipoGrafico: m.tipoGrafico,
           filtrosHash: m.filtrosHash,
           contextJson: m.context,
-          chartJson: m.chart,
+          chartJson: m.chartPrivado,
           resultadoJson: { critico, solucion },
           analysisText: critico,
           model: process.env.OPENAI_MODEL || 'gpt-5-mini',

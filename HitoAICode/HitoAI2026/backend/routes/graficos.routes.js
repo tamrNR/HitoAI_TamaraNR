@@ -97,11 +97,21 @@ function completarConTodasLasCompetencias(datosObtenidos, callback) {
     const mapaLogro = new Map();
     (datosObtenidos || []).forEach(r => mapaLogro.set(r.nombre, r.valor));
 
-    // Completar con 0.0 las que no tienen datos
-    const datosCompletos = todasCompetencias.map(c => ({
-      nombre: c.nombre,
-      valor: mapaLogro.has(c.nombre) ? mapaLogro.get(c.nombre) : '0.0'
-    }));
+    // Mapa de evaluados: nombre → evaluados
+    const mapaEvaluados = new Map();
+    (datosObtenidos || []).forEach(r => mapaEvaluados.set(r.nombre, r.evaluados));
+
+    // Completar con 0.0 las que no tienen datos, marcándolas con sinDatos
+    const datosCompletos = todasCompetencias.map(c => {
+      const tieneDato = mapaLogro.has(c.nombre);
+      const evaluados = mapaEvaluados.get(c.nombre);
+      const sinDatos = !tieneDato || Number(evaluados) === 0;
+      return {
+        nombre: c.nombre,
+        valor: tieneDato ? mapaLogro.get(c.nombre) : '0.0',
+        sinDatos: sinDatos
+      };
+    });
 
     console.log(`[GraficosRadar] ✅ Competencias completadas: ${datosObtenidos.length} con datos + ${datosCompletos.length - datosObtenidos.length} en 0`);
     callback(datosCompletos);
@@ -225,7 +235,8 @@ router.get('/radar', (req, res) => {
       const sqlCurso = `
         SELECT
           comp.Competencia AS nombre,
-          ROUND(AVG(comp.Porcentaje_Logro_Comp), 1) AS valor
+          ROUND(AVG(comp.Porcentaje_Logro_Comp), 1) AS valor,
+          SUM(comp.Indicadores_Evaluados) AS evaluados
         FROM vw_logro_competencia comp
         WHERE comp.ID_Asignatura = ?
           AND comp.Anio = ?
@@ -249,7 +260,8 @@ router.get('/radar', (req, res) => {
     const sql = `
       SELECT
         ve.Competencia AS nombre,
-        ROUND(AVG(ve.Porcentaje_Logro), 1) AS valor
+        ROUND(AVG(ve.Porcentaje_Logro), 1) AS valor,
+        SUM(ve.Indicadores_Evaluados) AS evaluados
       FROM \`${vista}\` ve
       WHERE ve.ID_Asignatura = ?
         AND ve.ID_Estudiante = ?
@@ -272,7 +284,8 @@ router.get('/radar', (req, res) => {
           const fallbackSql = `
             SELECT 
               ve.Competencia AS nombre,
-              ROUND(AVG(ve.Porcentaje_Logro), 1) AS valor
+              ROUND(AVG(ve.Porcentaje_Logro), 1) AS valor,
+              SUM(ve.Indicadores_Evaluados) AS evaluados
             FROM \`${vista}\` ve
             WHERE ve.ID_Asignatura = ?
               AND ve.ID_Estudiante = ?
@@ -368,9 +381,10 @@ router.get('/barras', async (req, res) => {
         SELECT competencia,
           ROUND(SUM(CASE WHEN promedio_estudiante >= ? THEN 1 ELSE 0 END) / COUNT(*) * 100, 1) AS porcentaje_cumple,
           SUM(CASE WHEN promedio_estudiante >= ? THEN 1 ELSE 0 END) AS num_cumple,
-          COUNT(*) AS total_alumnos
+          COUNT(*) AS total_alumnos,
+          SUM(evaluados) AS evaluados_total
         FROM (
-          SELECT ID_Estudiante, Competencia AS competencia, AVG(Porcentaje_Logro) AS promedio_estudiante
+          SELECT ID_Estudiante, Competencia AS competencia, AVG(Porcentaje_Logro) AS promedio_estudiante, SUM(Indicadores_Evaluados) AS evaluados
           FROM vw_logro_estudiante
           WHERE ID_Asignatura = ? AND Anio = ? AND Semestre = ?
           GROUP BY ID_Estudiante, Competencia
@@ -384,12 +398,14 @@ router.get('/barras', async (req, res) => {
       const numCumpleCurso = rowsCurso.map(r => Number(r.num_cumple) || 0);
       const totalCurso = rowsCurso.map(r => Number(r.total_alumnos) || 0);
       const numNoCumpleCurso = rowsCurso.map((r, i) => totalCurso[i] - numCumpleCurso[i]);
+      const sinDatosCurso = rowsCurso.map(r => Number(r.evaluados_total) === 0);
 
       return res.json({
         labels: labelsCurso,
         series: [
           { name: '% Alumnos que cumplen umbral', values: porcentajesCurso }
         ],
+        sinDatos: sinDatosCurso,
         extra: {
           numCumple: numCumpleCurso,
           numNoCumple: numNoCumpleCurso,
@@ -409,7 +425,9 @@ router.get('/barras', async (req, res) => {
       SELECT
         comp.Competencia                              AS competencia,
         ROUND(AVG(comp.Porcentaje_Logro_Comp), 1)    AS logro_promedio,
-        ROUND(AVG(est.Porcentaje_Logro), 1)          AS logro_alumno
+        ROUND(AVG(est.Porcentaje_Logro), 1)          AS logro_alumno,
+        SUM(est.Indicadores_Evaluados)                AS evaluados_alumno,
+        SUM(comp.Indicadores_Evaluados)                AS evaluados_promedio
       FROM vw_logro_competencia comp
       LEFT JOIN vw_logro_estudiante est
         ON  est.Competencia   = comp.Competencia
@@ -429,13 +447,17 @@ router.get('/barras', async (req, res) => {
     const labels         = rows.map(r => r.competencia);
     const promedioValues = rows.map(r => r.logro_promedio ?? 0);
     const alumnoValues   = rows.map(r => r.logro_alumno  ?? 0);
+    const sinDatosAlumno = rows.map(r => r.evaluados_alumno === null || Number(r.evaluados_alumno) === 0);
+    const sinDatosPromedio = rows.map(r => r.evaluados_promedio === null || Number(r.evaluados_promedio) === 0);
 
     res.json({
       labels,
       series: [
         { name: 'Promedio General', values: promedioValues },
         { name: 'Alumno',           values: alumnoValues   }
-      ]
+      ],
+      sinDatos: sinDatosAlumno,
+      sinDatosPromedio: sinDatosPromedio
     });
 
   } catch (error) {
@@ -475,6 +497,7 @@ router.get('/burbujas', async (req, res) => {
           comp.Competencia AS nombre,
           ROUND(AVG(comp.Porcentaje_Logro_Comp), 1) AS logro,
           ROUND(AVG(comp.Porcentaje_Logro_Comp), 1) - ? AS distancia_umbral,
+          SUM(comp.Indicadores_Evaluados) AS evaluados,
           (
             SELECT COUNT(DISTINCT ind.ID_Indicador)
             FROM indicador ind
@@ -494,7 +517,8 @@ router.get('/burbujas', async (req, res) => {
         x: r.logro,
         y: r.distancia_umbral,
         r: r.peso_curricular || 1,
-        cumpleUmbral: r.logro >= umbral
+        cumpleUmbral: r.logro >= umbral,
+        sinDatos: Number(r.evaluados) === 0
       }));
       console.log(`[Graficos] ✅ Burbujas Curso - ${formattedCurso.length} competencias procesadas (umbral=${umbral})`);
       return res.json({ items: formattedCurso, umbral });
@@ -505,6 +529,7 @@ router.get('/burbujas', async (req, res) => {
         ve.Competencia AS nombre,
         ROUND(AVG(ve.Porcentaje_Logro), 1) AS logro,
         ROUND(AVG(ve.Porcentaje_Logro), 1) - ? AS distancia_umbral,
+        SUM(ve.Indicadores_Evaluados) AS evaluados,
         (
           SELECT COUNT(DISTINCT ind.ID_Indicador)
           FROM indicador ind
@@ -526,7 +551,8 @@ router.get('/burbujas', async (req, res) => {
       x: r.logro,
       y: r.distancia_umbral,
       r: r.peso_curricular || 1,
-      cumpleUmbral: r.logro >= umbral
+      cumpleUmbral: r.logro >= umbral,
+      sinDatos: Number(r.evaluados) === 0
     }));
 
     console.log(`[Graficos] ✅ Burbujas - ${formatted.length} competencias procesadas (umbral=${umbral})`);
@@ -775,7 +801,8 @@ router.get('/lineas', (req, res) => {
       insc.asignatura_ID_Asignatura                           AS asignatura,
       insc.Semestre                                           AS semestre,
       CONCAT(c.ID_Competencia, ' · ', TRIM(c.Nombre))         AS competencia,
-      ROUND(AVG(ap.Obtenido / ind.Puntaje_Max * 100), 1)      AS logro
+      ROUND(AVG(ap.Obtenido / ind.Puntaje_Max * 100), 1)      AS logro,
+      SUM(CASE WHEN ap.Obtenido > 0 THEN 1 ELSE 0 END)        AS evaluados
     FROM aplicacion ap
     JOIN inscripcion    insc ON insc.ID_Inscripcion     = ap.inscripcion_ID_Inscripcion
     JOIN indicador      ind  ON ind.ID_Indicador        = ap.indicador_ID_Indicador
@@ -903,7 +930,8 @@ router.get('/evolucion-evaluacion', (req, res) => {
         ev.Nombre                                                AS evaluacionNombre,
         ev.N_Instancia                                           AS orden,
         CONCAT(c.ID_Competencia, ' · ', TRIM(c.Nombre))         AS competencia,
-        ROUND(AVG(ap.Obtenido / ind.Puntaje_Max * 100), 1)      AS logro
+        ROUND(AVG(ap.Obtenido / ind.Puntaje_Max * 100), 1)      AS logro,
+      SUM(CASE WHEN ap.Obtenido > 0 THEN 1 ELSE 0 END)        AS evaluados
       FROM aplicacion ap
       JOIN inscripcion    insc ON insc.ID_Inscripcion     = ap.inscripcion_ID_Inscripcion
       JOIN evaluacion     ev   ON ev.ID_Evaluacion         = ap.evaluacion_ID_Evaluacion
@@ -940,7 +968,8 @@ router.get('/evolucion-evaluacion', (req, res) => {
       ev.Nombre                                                AS evaluacionNombre,
       ev.N_Instancia                                           AS orden,
       CONCAT(c.ID_Competencia, ' · ', TRIM(c.Nombre))         AS competencia,
-      ROUND(AVG(ap.Obtenido / ind.Puntaje_Max * 100), 1)      AS logro
+      ROUND(AVG(ap.Obtenido / ind.Puntaje_Max * 100), 1)      AS logro,
+      SUM(CASE WHEN ap.Obtenido > 0 THEN 1 ELSE 0 END)        AS evaluados
     FROM aplicacion ap
     JOIN inscripcion    insc ON insc.ID_Inscripcion     = ap.inscripcion_ID_Inscripcion
     JOIN evaluacion     ev   ON ev.ID_Evaluacion         = ap.evaluacion_ID_Evaluacion

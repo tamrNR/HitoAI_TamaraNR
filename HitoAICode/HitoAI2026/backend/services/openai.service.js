@@ -1,6 +1,28 @@
 // services/openai.service.js
+const { sanitizarContexto } = require('../utils/sanitizarContexto');
+const { sanitizarChart } = require('../utils/sanitizarChart');
+
+// Prompt v2: reglas explícitas + un ejemplo (few-shot). Si se modifica, subir promptVersion
+// en analisisIA.controller.js para invalidar el caché de ai_analisis.
+const PROMPT_ANALISIS_V2 = [
+  'Eres un asistente que redacta retroalimentación para docentes en español claro, solo con los datos entregados.',
+  '',
+  'Reglas obligatorias:',
+  '1. Usa únicamente cifras que estén en chart.series o en chart.computed. No calcules ni estimes cifras nuevas.',
+  '2. Cada hallazgo debe citar la competencia, su logro en % y, si existe, el umbral y la brecha con su valor.',
+  '3. Si un dato es null o aparece en chart.computed.sinDatos, escribe "No disponible" para ese dato. Nunca lo reemplaces por 0 ni lo supongas.',
+  '4. Si no hay umbral en los datos ni en context, no menciones ninguno.',
+  '5. No uses frases como "probablemente" ni expliques causas que no estén en los datos.',
+  '6. Solo si TODOS los valores de TODAS las series faltan (null), analysis_text debe ser "No disponible: no hay evaluaciones suficientes para analizar." y las listas deben ir vacías. Si una serie (por ejemplo, el alumno) no tiene datos pero otra sí, informa esa serie como "No disponible" y analiza la que tiene datos (por ejemplo, el promedio del curso).',
+  '7. Si chart.computed.brechas existe, para cada brecha cita la cifra exacta: si es positiva escribe "N puntos bajo el umbral"; si es negativa (logro sobre el umbral) exprésala con el valor absoluto como "N puntos sobre el umbral". Indica siempre a qué serie y etiqueta pertenece (por ejemplo "Alumno – CD1: 42 puntos bajo el umbral"). No mezcles la brecha de una serie con la de otra. Nunca escribas la palabra "brecha" con un número negativo ni el signo menos. Escribe siempre el umbral con su unidad: "umbral 51 %". No repitas entre paréntesis la etiqueta completa de la competencia y el período cuando ya la citaste al inicio de la frase. Si el gráfico tiene una sola serie, no repitas su nombre en cada frase (por ejemplo, no escribas "Porcentaje de logro –" antes de cada competencia).',
+  '',
+  'Ejemplo de entrada:',
+  '{"chart":{"x":{"values":["CD1","CD2"]},"series":[{"name":"Alumno","values":[72,null]}],"computed":{"sinDatos":["CD2"]}},"context":{"umbral":60}}',
+  'Ejemplo de salida:',
+  '{"analysis_text":"CD1: logro 72 %, 12 puntos sobre el umbral de 60 %. CD2: No disponible.","recommendations":["Mantener el desempeño en CD1."],"alerts":["CD2: No disponible, falta evaluar."]}'
+].join('\n');
+
 async function generarAnalisisDesdeDatos({ chart, context }, clientOverride = null) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
   const { default: OpenAI } = await import('openai');
 
   const client = clientOverride || new OpenAI({
@@ -16,9 +38,9 @@ async function generarAnalisisDesdeDatos({ chart, context }, clientOverride = nu
         {
           role: 'system',
           content:
-            'Eres un asistente que genera retroalimentación para docentes en español claro. Usa SOLO los datos entregados. Considera que el objeto chart incluye métricas precomputadas en chart.computed (promedios, min/max, brechas y comparaciones) para guiar tu análisis. Enfócate en hallazgos accionables.'
+            PROMPT_ANALISIS_V2
         },
-        { role: 'user', content: JSON.stringify({ chart, context }) }
+        { role: 'user', content: JSON.stringify({ chart: sanitizarChart(chart), context: sanitizarContexto(context || {}) }) }
       ],
       text: {
         format: {
@@ -68,7 +90,6 @@ async function generarAnalisisDesdeDatos({ chart, context }, clientOverride = nu
 }
 
 async function generarInsightsBatch(items) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
   const { default: OpenAI } = await import('openai');
   
   const client = new OpenAI({ 
@@ -77,7 +98,7 @@ async function generarInsightsBatch(items) {
 
   const model = process.env.OPENAI_MODEL || 'gpt-5-mini';
 
-  const payload = items.map(({ id, chart, context }) => ({ id, chart, context }));
+  const payload = items.map(({ id, chart, context }) => ({ id, chart: sanitizarChart(chart), context: sanitizarContexto(context || {}) }));
 
   try {
     const resp = await client.responses.create({
@@ -133,7 +154,6 @@ async function generarInsightsBatch(items) {
 }
 
 async function generarResumenCriticoBatch(items) {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
   const { default: OpenAI } = await import('openai');
   
   const client = new OpenAI({ 
@@ -142,7 +162,7 @@ async function generarResumenCriticoBatch(items) {
 
   const model = process.env.OPENAI_MODEL || 'gpt-5-mini';
 
-  const payload = items.map(({ id, chart, context }) => ({ id, chart, context }));
+  const payload = items.map(({ id, chart, context }) => ({ id, chart: sanitizarChart(chart), context: sanitizarContexto(context || {}) }));
 
   try {
     const resp = await client.responses.create({

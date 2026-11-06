@@ -48,12 +48,12 @@ const expected = {
   }
 };
 
-// Caso 1: tipoGrafico 'radar'
+// Caso 1: tipoGrafico 'radar' (incluye brechas: [] porque no se pasó umbral)
 const resultRadar = computeMetrics({ chart, tipoGrafico: 'radar' });
-assert.deepStrictEqual(resultRadar, expected);
+assert.deepStrictEqual(resultRadar, { ...expected, brechas: [] });
 
-// Caso 2: tipoGrafico 'barras'
+// Caso 2: tipoGrafico 'barras' (incluye brechas: [] porque no se pasó umbral)
 const resultBarras = computeMetrics({ chart, tipoGrafico: 'barras' });
-assert.deepStrictEqual(resultBarras, expected);
+assert.deepStrictEqual(resultBarras, { ...expected, brechas: [] });
 
 console.log('PU-04 APROBADA: las métricas para radar y barras fueron procesadas correctamente.');

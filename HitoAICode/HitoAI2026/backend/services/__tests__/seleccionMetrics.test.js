@@ -49,19 +49,20 @@ const esperadoBurbujas = {
   top3Brechas: [
     { competencia: 'CD1', brecha: 15 }
   ],
-  promedioLogro: 80
+  promedioLogro: 80,
+  brechas: []
 };
 
-// Caso 1: radar
+// Caso 1: radar (incluye brechas: [] porque no se pasó umbral)
 assert.deepStrictEqual(
   computeMetrics({ chart: chartXY, tipoGrafico: 'radar' }),
-  esperadoXY
+  { ...esperadoXY, brechas: [] }
 );
 
-// Caso 2: barras
+// Caso 2: barras (incluye brechas: [] porque no se pasó umbral)
 assert.deepStrictEqual(
   computeMetrics({ chart: chartXY, tipoGrafico: 'barras' }),
-  esperadoXY
+  { ...esperadoXY, brechas: [] }
 );
 
 // Caso 3: burbujas
@@ -70,10 +71,10 @@ assert.deepStrictEqual(
   esperadoBurbujas
 );
 
-// Caso 4: tipo no soportado (lineas)
+// Caso 4: lineas (devuelve solo brechas; sin umbral => [])
 assert.deepStrictEqual(
   computeMetrics({ chart: chartXY, tipoGrafico: 'lineas' }),
-  {}
+  { brechas: [] }
 );
 
 // Caso 5: tipoGrafico undefined

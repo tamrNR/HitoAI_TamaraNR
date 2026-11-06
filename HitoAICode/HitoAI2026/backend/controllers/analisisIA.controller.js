@@ -3,6 +3,8 @@ const { generarAnalisisDesdeDatos } = require('../services/openai.service');
 const { computeMetrics } = require('../services/metrics.service');
 const { buildFiltrosHash } = require('../utils/hash.util');
 const { findByHash, findById, insertAnalisis, updateError } = require('../services/aiAnalisis.repository');
+const { sanitizarContexto } = require('../utils/sanitizarContexto');
+const { sanitizarChart } = require('../utils/sanitizarChart');
 
 async function generarAnalisisIA(req, res) {
   try {
@@ -40,16 +42,32 @@ async function generarAnalisisIA(req, res) {
       else tipoGrafico = 'barras';
     }
 
-    const promptVersion = 'v1';
+    const promptVersion = 'v6';
+
+    // Eliminar datos personales del alumno antes de hash, OpenAI y ai_analisis
+    const contextSanitizado = sanitizarContexto(context || {});
+    const chartSanitizado = sanitizarChart(chart, tipoGrafico);
 
     // Enriquecer con métricas
-    const metrics = computeMetrics({ chart, tipoGrafico });
-    const chartEnriched = { ...chart, computed: metrics };
+    const metrics = computeMetrics({ chart: chartSanitizado, tipoGrafico, umbral: context?.umbral });
+    const chartEnriched = { ...chartSanitizado, computed: metrics };
+
+    // Sin ningún dato evaluado: no se llama a OpenAI (ahorra costo y evita texto inventado)
+    const etiquetas = Array.isArray(chartSanitizado?.x?.values) ? chartSanitizado.x.values : [];
+    const sinDatos = Array.isArray(metrics?.sinDatos) ? metrics.sinDatos : [];
+    if (etiquetas.length > 0 && sinDatos.length >= etiquetas.length) {
+      return res.json({
+        analysis_id: null,
+        analysis_text: 'No disponible: no hay evaluaciones suficientes para analizar.',
+        recommendations: [],
+        alerts: []
+      });
+    }
 
     // Hash estable de filtros
     const filtrosHash = buildFiltrosHash({
       tipoGrafico,
-      context,
+      context: contextSanitizado,
       chart: chartEnriched,
       promptVersion
     });
@@ -90,7 +108,7 @@ async function generarAnalisisIA(req, res) {
       console.log('[AnalisisIA] ⛔ cache miss - llamando OpenAI');
     }
     const model = process.env.OPENAI_MODEL || 'gpt-5-mini';
-    const result = await generarAnalisisDesdeDatos({ chart: chartEnriched, context });
+    const result = await generarAnalisisDesdeDatos({ chart: chartEnriched, context: contextSanitizado });
 
     const normalized = {
       analysis_text: String(result?.analysis_text || ''),
@@ -104,7 +122,7 @@ async function generarAnalisisIA(req, res) {
       const ins = await insertAnalisis({
         tipoGrafico,
         filtrosHash,
-        contextJson: context,
+        contextJson: contextSanitizado,
         chartJson: chartEnriched,
         resultadoJson: normalized,
         analysisText: normalized.analysis_text,
@@ -114,7 +132,7 @@ async function generarAnalisisIA(req, res) {
       });
       insertedId = ins?.id || null;
     } catch (e) {
-      console.warn('[AnalisisIA] ⚠️ No se pudo insertar en ai_analisis:', e?.message || e);
+      console.error('[AnalisisIA] ❌ No se pudo insertar en ai_analisis:', e?.message || e, '| code:', e?.code || 'N/A');
     }
 
     return res.json({
@@ -128,16 +146,17 @@ async function generarAnalisisIA(req, res) {
     // Persistir error
     try {
       const body = req.body || {};
-      const chart = body.chart || {};
-      const context = body.context || {};
+      const context = sanitizarContexto(body.context || {});
       let tipoGrafico = String(body?.tipoGrafico || '').trim();
       if (!tipoGrafico) {
+        const chart = body.chart || {};
         if (chart?.summary || chart?.extra) tipoGrafico = 'burbujas';
         else if (Array.isArray(chart?.series) && chart.series.length >= 2) tipoGrafico = 'barras';
         else tipoGrafico = 'barras';
       }
-      const promptVersion = 'v1';
-      const metrics = computeMetrics({ chart, tipoGrafico });
+      const promptVersion = 'v6';
+      const chart = sanitizarChart(body.chart || {}, tipoGrafico);
+      const metrics = computeMetrics({ chart, tipoGrafico, umbral: context.umbral });
       const chartEnriched = { ...chart, computed: metrics };
       const filtrosHash = buildFiltrosHash({ tipoGrafico, context, chart: chartEnriched, promptVersion });
       await updateError({

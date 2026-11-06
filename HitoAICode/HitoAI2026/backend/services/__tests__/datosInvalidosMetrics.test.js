@@ -17,7 +17,8 @@ console.log('Caso 2: chart vacío para radar');
 const resultado2 = computeMetrics({ chart: {}, tipoGrafico: 'radar' });
 assert.deepStrictEqual(resultado2, {
   perSeries: [],
-  comparisons: undefined
+  comparisons: undefined,
+  brechas: []
 });
 console.log('✅ Caso 2 aprobado\n');
 
@@ -38,7 +39,8 @@ assert.deepStrictEqual(resultado3, {
       stats: { avg: 0, min: 0, max: 0 }
     }
   ],
-  comparisons: undefined
+  comparisons: undefined,
+  brechas: []
 });
 console.log('✅ Caso 3 aprobado\n');
 
@@ -55,19 +57,22 @@ const chartInvalidos = {
   ]
 };
 const resultado4 = computeMetrics({ chart: chartInvalidos, tipoGrafico: 'radar' });
-// COMPORTAMIENTO ACTUAL: null se convierte a 0, no se filtra como NaN
-// Resultado real: avg: 25, min: 0, max: 50 (promedio de [0, 50])
+// COMPORTAMIENTO v2: null/undefined = dato faltante (NO es 0). Se excluyen del cálculo
+// y se informan en sinDatos. 'abc' y NaN siguen filtrándose como inválidos.
+// Resultado: solo cuenta el 50 -> avg: 50, min: 50, max: 50
 assert.deepStrictEqual(resultado4, {
   perSeries: [
     {
       name: 'Alumno',
       unit: '%',
-      stats: { avg: 25, min: 0, max: 50 }
+      stats: { avg: 50, min: 50, max: 50 }
     }
   ],
-  comparisons: undefined
+  comparisons: undefined,
+  sinDatos: ['A', 'B'],
+  brechas: []
 });
-console.log('✅ Caso 4 aprobado (comportamiento actual documentado)\n');
+console.log('✅ Caso 4 aprobado (null = dato faltante, informado en sinDatos)\n');
 
 // Caso 5 — burbujas sin información
 console.log('Caso 5: burbujas sin información');
@@ -81,9 +86,9 @@ const resultado5 = computeMetrics({
   tipoGrafico: 'burbujas'
 });
 assert.deepStrictEqual(resultado5, {
-  totalEvaluaciones: 0,
   top3Brechas: [],
-  promedioLogro: 0
+  promedioLogro: 0,
+  brechas: []
 });
 console.log('✅ Caso 5 aprobado\n');
 

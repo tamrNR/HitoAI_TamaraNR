@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { NgbModal, NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
 import { AsignaturaService } from '../../../services/asignatura.service';
 import { SidebarComponent } from '../../../shared/components/sidebar/sidebar.component';
@@ -41,11 +42,14 @@ export class MainContenidosComponent implements OnInit {
 
   constructor(
     private asignaturaService: AsignaturaService,
-    private modalService: NgbModal
+    private modalService: NgbModal,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
     this.rolUsuario = localStorage.getItem('rol') || '';
+    const q = this.route.snapshot.queryParamMap.get('q');
+    if (q) this.filtroTexto = q;
     this.cargarAsignaturas();
   }
 

@@ -64,6 +64,7 @@ const analisisRoutes = require('./routes/analisis.routes');
 const graficosRoutes = require('./routes/graficos.routes'); // ✅ Gráficos de analítica
 const analiticaFiltrosRoutes = require('./routes/analitica-filtros.routes'); // ✅ Filtros de analítica
 const facultadRoutes = require('./routes/facultad.routes');
+const comiteRoutes = require('./routes/comite.routes'); // ✅ Panel Comité Curricular
 const { authorizeRoles } = require('./middleware/auth.middleware');
 
 // Registrar rutas
@@ -85,6 +86,7 @@ app.use('/api/graficos', authorizeRoles('Administrador', 'Jefe de Carrera', 'Com
 app.use('/api/analitica', authorizeRoles('Administrador', 'Jefe de Carrera', 'Comité Curricular'), analiticaFiltrosRoutes); // ✅ Filtros de analítica con autorización
 app.use('/api/analitica-filtros', authorizeRoles('Administrador', 'Jefe de Carrera', 'Comité Curricular'), analiticaFiltrosRoutes); // ✅ Alias solicitado con autorización
 app.use('/api/facultad', facultadRoutes);
+app.use('/api/comite', authorizeRoles('Comité Curricular'), comiteRoutes); // ✅ Panel Comité Curricular
 
 console.log('✅ Todas las rutas cargadas correctamente');
 

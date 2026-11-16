@@ -1,9 +1,11 @@
 import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { Subject } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private darkMode = false;
+  readonly themeChanged$ = new Subject<boolean>();
 
   constructor(@Inject(PLATFORM_ID) private platformId: object) {
     if (isPlatformBrowser(this.platformId)) {
@@ -34,5 +36,6 @@ export class ThemeService {
         document.body.classList.remove('dark-mode');
       }
     }
+    this.themeChanged$.next(this.darkMode);
   }
 }

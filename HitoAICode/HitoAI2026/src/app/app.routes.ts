@@ -8,7 +8,6 @@ import { AuthGuard } from './guards/auth.guard';
 import { HomeComponent as HomeAdminComponent } from './modules/admin/home/home.component';
 import { HomeComponent as HomeJefeCarreraComponent } from './modules/jefe-carrera/home/home.component';
 import { HomeComponent as HomeProfesorComponent } from './modules/profesor/home/home.component';
-import { HomeComponent as HomeComiteComponent } from './modules/comite/home/home.component';
 
 import { LoginComponent } from './modules/login/login.component';
 
@@ -119,7 +118,13 @@ export const routes: Routes = [
   // ==============================
   // COMITÉ CURRICULAR
   // ==============================
-  { path: 'comite', component: HomeComiteComponent, canActivate: [AuthGuard] },
+  {
+    path: 'comite',
+    canActivate: [AuthGuard],
+    loadComponent: () =>
+      import('./modules/comite/home/home.component')
+        .then(m => m.HomeComponent)
+  },
   {
     path: 'comite/ra',
     canActivate: [AuthGuard],

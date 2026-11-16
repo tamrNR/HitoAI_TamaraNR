@@ -1,4 +1,5 @@
 import { Component, OnInit, ViewContainerRef } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { NgbModal, NgbModalModule } from '@ng-bootstrap/ng-bootstrap';
 import { CommonModule } from '@angular/common';
 
@@ -25,7 +26,8 @@ export class MainRaComponent implements OnInit {
     private raService: RaService,
     private asignaturaService: AsignaturaService,
     private modalService: NgbModal,
-    private viewContainerRef: ViewContainerRef
+    private viewContainerRef: ViewContainerRef,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -70,6 +72,13 @@ export class MainRaComponent implements OnInit {
             }
 
             this.agrupadosPorAsignatura = Array.from(mapa.values());
+
+            // Filtro por asignatura (deep-link desde el panel del comité)
+            const asignaturaFiltro = this.route.snapshot.queryParamMap.get('asignatura');
+            if (asignaturaFiltro) {
+              this.agrupadosPorAsignatura = this.agrupadosPorAsignatura
+                .filter(g => String(g.asignatura) === asignaturaFiltro);
+            }
           },
           error: (error) => {
             console.error('[MainRA] Error al cargar asignaturas:', error);

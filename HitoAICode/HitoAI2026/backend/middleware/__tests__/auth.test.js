@@ -253,5 +253,48 @@ async function asyncTest(nombre, fn) {
     assert.strictEqual(usuarioPuedeVerAsignatura(decanoAjeno, asignatura), false);
   });
 
+  console.log('\n== Comité: aislamiento entre carreras ==');
+
+  const comiteA = { rol: 'Comité Curricular', carreraId: 5 };
+  const comiteB = { rol: 'Comité Curricular', carreraId: 8 };
+  const jefeOtra = { rol: 'Jefe de Carrera', carreraId: 7 };
+
+  test('Comité A ve asignaturas de su carrera', () => {
+    assert.strictEqual(usuarioPuedeVerAsignatura(comiteA, asignatura), true);
+  });
+
+  test('Comité B (otra carrera) NO ve asignaturas de A', () => {
+    assert.strictEqual(usuarioPuedeVerAsignatura(comiteB, asignatura), false);
+  });
+
+  test('Jefe de otra carrera NO ve asignaturas del comité', () => {
+    assert.strictEqual(usuarioPuedeVerAsignatura(jefeOtra, asignatura), false);
+  });
+
+  await asyncTest('Comité con carreraId null -> 403 (usuario sin vínculo)', async () => {
+    sqlQueue = [[asignatura]];
+    const req = { user: { rol: 'Comité Curricular', carreraId: null }, query: { asignatura: 'TIS800' } };
+    const res = mockRes();
+    await scopeAsignatura(r => r.query.asignatura)(req, res, () => {});
+    assert.strictEqual(res.statusCode, 403);
+  });
+
+  await asyncTest('Comité ve su carrera en scopeCarrera', async () => {
+    sqlQueue = [[carreraPropia]];
+    const req = { user: comiteA, query: { carrera: 5 } };
+    const res = mockRes();
+    let next = false;
+    await scopeCarrera(r => r.query.carrera)(req, res, () => { next = true; });
+    assert.strictEqual(next, true);
+  });
+
+  await asyncTest('Comité recibe 403 en carrera ajena', async () => {
+    sqlQueue = [[carreraAjena]];
+    const req = { user: comiteA, query: { carrera: 8 } };
+    const res = mockRes();
+    await scopeCarrera(r => r.query.carrera)(req, res, () => {});
+    assert.strictEqual(res.statusCode, 403);
+  });
+
   console.log(`\n== auth.test.js: ${passed} checks OK ==\n`);
 })();

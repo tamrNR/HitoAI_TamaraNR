@@ -273,13 +273,6 @@ export class AnaliticaService {
     );
   }
 
-  getInsightsDashboard(payload: { charts: any[] }): Observable<{ insights: Array<{ id: string; insight: string }> }> {
-    return this.http.post<{ insights: Array<{ id: string; insight: string }> }>(`${this.baseUrl}/reporte/insights`, payload, { headers: this.getAuthHeaders() }).pipe(
-      retry(0), tap(r => console.log('[AnaliticaService] ✅ Insights:', r)),
-      catchError(this.handleError('getInsightsDashboard'))
-    );
-  }
-
   exportarReporteAnalitica(payload: { charts: any[]; meta: any }) {
     return this.http.post(`${this.baseUrl}/reporte/exportar`, payload, {
       responseType: 'blob',
@@ -290,21 +283,6 @@ export class AnaliticaService {
       tap(r => console.log('[AnaliticaService] ✅ Reporte exportado:', r)),
       catchError(this.handleError('exportarReporteAnalitica'))
     );
-  }
-
-  getBurbujasDetalle(filtros: any) {
-    return [
-      { ID_Evaluacion: 1, Competencia: 'Desarrollo de Software', Evaluacion: 'Primera Intervención', Porcentaje_Logro: 85, Brecha: 15, Nivel: 'Alto', Peso: 3 },
-      { ID_Evaluacion: 2, Competencia: 'Desarrollo de Software', Evaluacion: 'Segunda Intervención', Porcentaje_Logro: 92, Brecha: 8,  Nivel: 'Excelente', Peso: 4 },
-      { ID_Evaluacion: 3, Competencia: 'Desarrollo de Software', Evaluacion: 'Examen Final',          Porcentaje_Logro: 95, Brecha: 5,  Nivel: 'Excelente', Peso: 5 },
-      { ID_Evaluacion: 4, Competencia: 'Trabajo en Equipo',      Evaluacion: 'Primera Intervención', Porcentaje_Logro: 75, Brecha: 25, Nivel: 'Alto', Peso: 3 },
-      { ID_Evaluacion: 5, Competencia: 'Trabajo en Equipo',      Evaluacion: 'Segunda Intervención', Porcentaje_Logro: 80, Brecha: 20, Nivel: 'Alto', Peso: 4 },
-      { ID_Evaluacion: 6, Competencia: 'Propuesta de Soluciones',Evaluacion: 'Primera Intervención', Porcentaje_Logro: 60, Brecha: 40, Nivel: 'Medio', Peso: 3 },
-      { ID_Evaluacion: 7, Competencia: 'Propuesta de Soluciones',Evaluacion: 'Segunda Intervención', Porcentaje_Logro: 68, Brecha: 32, Nivel: 'Medio', Peso: 4 },
-      { ID_Evaluacion: 8, Competencia: 'Propuesta de Soluciones',Evaluacion: 'Examen Final',          Porcentaje_Logro: 70, Brecha: 30, Nivel: 'Alto', Peso: 5 },
-      { ID_Evaluacion: 9, Competencia: 'Gestión de Proyectos',   Evaluacion: 'Primera Intervención', Porcentaje_Logro: 45, Brecha: 55, Nivel: 'Bajo', Peso: 3 },
-      { ID_Evaluacion:10, Competencia: 'Gestión de Proyectos',   Evaluacion: 'Segunda Intervención', Porcentaje_Logro: 52, Brecha: 48, Nivel: 'Medio', Peso: 4 },
-    ];
   }
 
   // ── ESTADO COMPARTIDO ─────────────────────────────────────────────────────

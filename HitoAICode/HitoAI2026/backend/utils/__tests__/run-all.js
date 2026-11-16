@@ -6,11 +6,9 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
-// Tests omitidos: el módulo bajo prueba ya no existe en el código
-// (candidato a código muerto; se conserva el archivo por decisión del usuario)
-const OMITIDOS = new Set([
-  path.join('utils', '__tests__', 'resumenCompetencias.test.js')
-]);
+// Tests omitidos: el módulo bajo prueba ya no existe en el código.
+// (lista vacía por ahora; resumenCompetencias.test.js fue eliminado junto a su módulo)
+const OMITIDOS = new Set();
 
 function recolectarTests(dir, acc = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

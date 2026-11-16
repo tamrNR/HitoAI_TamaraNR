@@ -25,7 +25,8 @@ const {
   verifyAuth,
   authorizeRoles,
   usuarioPuedeVerAsignatura,
-  scopeAsignatura
+  scopeAsignatura,
+  scopeCarrera
 } = require('../../middleware/auth.middleware');
 
 const SECRET = process.env.JWT_SECRET;
@@ -182,6 +183,74 @@ async function asyncTest(nombre, fn) {
     const res = mockRes();
     await scopeAsignatura(r => r.params.id)(req, res, () => {});
     assert.strictEqual(res.statusCode, 404);
+  });
+
+  console.log('\n== Decano: scope por facultad ==');
+
+  const decanoPropio = { rol: 'Decano', facultadId: 2 };
+  const decanoAjeno = { rol: 'Decano', facultadId: 9 };
+  const carreraPropia = { ID_Carrera: 5, facultad_ID_Facultad: 2 };
+  const carreraAjena = { ID_Carrera: 8, facultad_ID_Facultad: 7 };
+
+  await asyncTest('Decano + carrera de su facultad -> next()', async () => {
+    sqlQueue = [[carreraPropia]];
+    const req = { user: decanoPropio, query: { carrera: 5 } };
+    const res = mockRes();
+    let next = false;
+    await scopeCarrera(r => r.query.carrera)(req, res, () => { next = true; });
+    assert.strictEqual(next, true);
+  });
+
+  await asyncTest('Decano + carrera de otra facultad -> 403', async () => {
+    sqlQueue = [[carreraAjena]];
+    const req = { user: decanoPropio, query: { carrera: 8 } };
+    const res = mockRes();
+    let next = false;
+    await scopeCarrera(r => r.query.carrera)(req, res, () => { next = true; });
+    assert.strictEqual(res.statusCode, 403);
+    assert.strictEqual(next, false);
+  });
+
+  await asyncTest('Decano + asignatura de su facultad -> next()', async () => {
+    sqlQueue = [[{ ID_Asignatura: 'TIS800', carrera_ID_Carrera: 5, usuario_ID_Usuario: 'x', facultad_ID_Facultad: 2 }]];
+    const req = { user: decanoPropio, query: { asignatura: 'TIS800' } };
+    const res = mockRes();
+    let next = false;
+    await scopeAsignatura(r => r.query.asignatura)(req, res, () => { next = true; });
+    assert.strictEqual(next, true);
+  });
+
+  await asyncTest('Decano + asignatura/alumno de otra facultad -> 403', async () => {
+    sqlQueue = [[{ ID_Asignatura: 'EXT999', carrera_ID_Carrera: 9, usuario_ID_Usuario: 'x', facultad_ID_Facultad: 7 }]];
+    const req = { user: decanoPropio, query: { asignatura: 'EXT999' } };
+    const res = mockRes();
+    let next = false;
+    await scopeAsignatura(r => r.query.asignatura)(req, res, () => { next = true; });
+    assert.strictEqual(res.statusCode, 403);
+    assert.strictEqual(next, false);
+  });
+
+  await asyncTest('Decano sin facultadId en token -> 403 (ámbito vacío)', async () => {
+    sqlQueue = [[{ ID_Asignatura: 'TIS800', carrera_ID_Carrera: 5, usuario_ID_Usuario: 'x', facultad_ID_Facultad: 2 }]];
+    const req = { user: { rol: 'Decano', facultadId: null }, query: { asignatura: 'TIS800' } };
+    const res = mockRes();
+    await scopeAsignatura(r => r.query.asignatura)(req, res, () => {});
+    assert.strictEqual(res.statusCode, 403);
+  });
+
+  await asyncTest('Decano en ruta de escritura -> 403', async () => {
+    const mw = authorizeRoles('Administrador', 'Jefe de Carrera', 'Comité Curricular');
+    const req = { user: decanoPropio };
+    const res = mockRes();
+    let next = false;
+    mw(req, res, () => { next = true; });
+    assert.strictEqual(res.statusCode, 403);
+    assert.strictEqual(next, false);
+  });
+
+  test('usuarioPuedeVerAsignatura: Decano solo su facultad', () => {
+    assert.strictEqual(usuarioPuedeVerAsignatura(decanoPropio, asignatura), true);
+    assert.strictEqual(usuarioPuedeVerAsignatura(decanoAjeno, asignatura), false);
   });
 
   console.log(`\n== auth.test.js: ${passed} checks OK ==\n`);

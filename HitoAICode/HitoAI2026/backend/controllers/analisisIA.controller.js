@@ -5,6 +5,7 @@ const { buildFiltrosHash } = require('../utils/hash.util');
 const { findByHash, findById, insertAnalisis, updateError } = require('../services/aiAnalisis.repository');
 const { sanitizarContexto } = require('../utils/sanitizarContexto');
 const { sanitizarChart } = require('../utils/sanitizarChart');
+const { obtenerScopeAsignatura, usuarioPuedeVerAsignatura, normalize } = require('../middleware/auth.middleware');
 
 async function generarAnalisisIA(req, res) {
   try {
@@ -200,6 +201,20 @@ async function obtenerAnalisisPorId(req, res) {
     }
     const row = await findById(id);
     if (!row) return res.status(404).json({ error: 'No encontrado' });
+
+    // Scope: el análisis solo es legible si su asignatura pertenece al ámbito del usuario
+    if (normalize(req.user?.rol) !== 'administrador') {
+      let ctx = row.context_json;
+      if (typeof ctx === 'string') { try { ctx = JSON.parse(ctx); } catch { ctx = null; } }
+      const asignaturaId = ctx?.asignatura ?? ctx?.asignaturaId ?? null;
+      if (!asignaturaId) {
+        return res.status(403).json({ error: 'No autorizado: no se pudo verificar el ámbito del análisis' });
+      }
+      const asignatura = await obtenerScopeAsignatura(asignaturaId);
+      if (!asignatura || !usuarioPuedeVerAsignatura(req.user, asignatura)) {
+        return res.status(403).json({ error: 'No autorizado: el análisis no pertenece a tu ámbito' });
+      }
+    }
 
     const parseMaybe = (v) => {
       if (v == null) return null;

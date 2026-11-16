@@ -9,7 +9,6 @@ import { HomeComponent as HomeAdminComponent } from './modules/admin/home/home.c
 import { HomeComponent as HomeJefeCarreraComponent } from './modules/jefe-carrera/home/home.component';
 import { HomeComponent as HomeProfesorComponent } from './modules/profesor/home/home.component';
 import { HomeComponent as HomeComiteComponent } from './modules/comite/home/home.component';
-import { DecanoHomeComponent } from './modules/decano/home/decano-home.component';
 
 import { LoginComponent } from './modules/login/login.component';
 
@@ -168,12 +167,15 @@ export const routes: Routes = [
   },
 
   // ==============================
-  // DECANO (solo lectura, carreras de su Facultad)
+  // DECANO: mismo módulo de analítica que Admin/Jefe/Comité, solo lectura
+  // (el backend limita carreras/asignaturas a su facultad)
   // ==============================
   {
     path: 'decano',
-    component: DecanoHomeComponent,
     canActivate: [AuthGuard],
+    loadChildren: () =>
+      import('./modules/analitica/analitica.module')
+        .then(m => m.AnaliticaModule),
     data: { role: DECANO }
   },
 

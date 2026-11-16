@@ -1,14 +1,3 @@
-.decano-layout {
-  display: flex;
-  min-height: 100vh;
-}
-
-.decano-main {
-  flex: 1;
-  padding: 1.5rem;
-  background-color: #f5f7fa;
-}
-
 .fila-asignatura {
   background-color: #e8eef7;
   font-weight: 600;

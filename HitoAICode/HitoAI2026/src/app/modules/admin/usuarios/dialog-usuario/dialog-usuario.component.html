@@ -37,14 +37,14 @@
       </select>
       <small class="text-muted">Obligatorio para el rol Decano: define el ámbito de sus análisis.</small>
     </div>
-    <div class="mb-3 position-relative">
+    <div class="mb-3">
       <label class="form-label">Clave</label>
-      <input [type]="mostrarClave ? 'text' : 'password'" class="form-control" [(ngModel)]="usuario.Clave" name="clave" [disabled]="bloqueado" required />
-
-      <button type="button" class="btn btn-outline-secondary btn-sm toggle-btn" (click)="mostrarClave = !mostrarClave">
-
-        <i class="bi" [ngClass]="mostrarClave ? 'bi-eye-slash' : 'bi-eye'"></i>
-      </button>
+      <div class="input-group">
+        <input [type]="mostrarClave ? 'text' : 'password'" class="form-control" [(ngModel)]="usuario.Clave" name="clave" [disabled]="bloqueado" required />
+        <button type="button" class="btn btn-outline-secondary" (click)="mostrarClave = !mostrarClave" [attr.aria-label]="mostrarClave ? 'Ocultar clave' : 'Mostrar clave'">
+          <i class="bi" [ngClass]="mostrarClave ? 'bi-eye-slash' : 'bi-eye'"></i>
+        </button>
+      </div>
     </div>
   </form>
 
@@ -78,19 +78,23 @@
     </div>
 
     <div *ngIf="modo === 'editar'">
-      <div class="mb-3 position-relative">
+      <div class="mb-3">
         <label class="form-label">Nueva clave</label>
-        <input [type]="mostrarNueva ? 'text' : 'password'" class="form-control" [(ngModel)]="nuevaClave" />
-        <button type="button" class="btn btn-outline-secondary btn-sm toggle-btn" (click)="mostrarNueva = !mostrarNueva">
-          <i class="bi" [ngClass]="mostrarNueva ? 'bi-eye-slash' : 'bi-eye'"></i>
-        </button>
+        <div class="input-group">
+          <input [type]="mostrarNueva ? 'text' : 'password'" class="form-control" [(ngModel)]="nuevaClave" />
+          <button type="button" class="btn btn-outline-secondary" (click)="mostrarNueva = !mostrarNueva" [attr.aria-label]="mostrarNueva ? 'Ocultar clave' : 'Mostrar clave'">
+            <i class="bi" [ngClass]="mostrarNueva ? 'bi-eye-slash' : 'bi-eye'"></i>
+          </button>
+        </div>
       </div>
-      <div class="mb-3 position-relative">
+      <div class="mb-3">
         <label class="form-label">Confirmar clave</label>
-        <input [type]="mostrarConfirmar ? 'text' : 'password'" class="form-control" [(ngModel)]="confirmar" />
-        <button type="button" class="btn btn-outline-secondary btn-sm toggle-btn" (click)="mostrarConfirmar = !mostrarConfirmar">
-          <i class="bi" [ngClass]="mostrarConfirmar ? 'bi-eye-slash' : 'bi-eye'"></i>
-        </button>
+        <div class="input-group">
+          <input [type]="mostrarConfirmar ? 'text' : 'password'" class="form-control" [(ngModel)]="confirmar" />
+          <button type="button" class="btn btn-outline-secondary" (click)="mostrarConfirmar = !mostrarConfirmar" [attr.aria-label]="mostrarConfirmar ? 'Ocultar clave' : 'Mostrar clave'">
+            <i class="bi" [ngClass]="mostrarConfirmar ? 'bi-eye-slash' : 'bi-eye'"></i>
+          </button>
+        </div>
       </div>
     </div>
   </div>

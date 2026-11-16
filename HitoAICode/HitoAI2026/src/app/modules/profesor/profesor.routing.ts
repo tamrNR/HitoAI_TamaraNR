@@ -21,9 +21,21 @@ const routes: Routes = [
   {
     path: '',
     component: HomeProfesorComponent,
+    canActivate: [AuthGuard],
+    data: { role: ['Profesor'] },
     children: [
-      { path: '', component: InicioProfesorComponent },
-      { path: 'asignaturas', component: MainAsignaturasProfesorComponent, data: { role: ['Administrador', 'Profesor'] } }
+      {
+        path: '',
+        component: InicioProfesorComponent,
+        canActivate: [AuthGuard],
+        data: { role: ['Profesor'] }
+      },
+      {
+        path: 'asignaturas',
+        component: MainAsignaturasProfesorComponent,
+        canActivate: [AuthGuard],
+        data: { role: ['Administrador', 'Profesor'] }
+      }
     ]
   }
 ];

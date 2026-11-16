@@ -41,11 +41,9 @@ export class AnaliticaService {
 
   constructor(private http: HttpClient) {}
 
+  // La autenticación la adjunta authInterceptor (Bearer JWT); no enviar rol por header
   private getAuthHeaders(): HttpHeaders {
-    const userRole = localStorage.getItem('rol') || '';
-    return new HttpHeaders({
-      'X-User-Role': userRole
-    });
+    return new HttpHeaders();
   }
 
   private handleError(operacion: string) {

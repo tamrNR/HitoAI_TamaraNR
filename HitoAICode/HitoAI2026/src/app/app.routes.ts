@@ -8,8 +8,19 @@ import { AuthGuard } from './guards/auth.guard';
 import { HomeComponent as HomeAdminComponent } from './modules/admin/home/home.component';
 import { HomeComponent as HomeJefeCarreraComponent } from './modules/jefe-carrera/home/home.component';
 import { HomeComponent as HomeProfesorComponent } from './modules/profesor/home/home.component';
+import { HomeComponent as HomeComiteComponent } from './modules/comite/home/home.component';
+import { DecanoHomeComponent } from './modules/decano/home/decano-home.component';
 
 import { LoginComponent } from './modules/login/login.component';
+
+// Roles reutilizables
+const ADMIN = ['Administrador'];
+const JEFE = ['Jefe de Carrera'];
+const PROFESOR = ['Profesor'];
+const COMITE = ['Comité Curricular'];
+const DECANO = ['Decano'];
+const ESTRUCTURA = ['Administrador', 'Jefe de Carrera', 'Comité Curricular'];
+const ANALITICA = ['Administrador', 'Jefe de Carrera', 'Comité Curricular', 'Decano'];
 
 // ==============================
 // RUTAS PRINCIPALES
@@ -18,19 +29,20 @@ export const routes: Routes = [
   // Redirect raíz
   { path: '', redirectTo: 'login', pathMatch: 'full' },
 
-  // Login
+  // Login (público)
   { path: 'login', component: LoginComponent },
 
   // ==============================
-  // ADMIN
+  // ADMINISTRADOR
   // ==============================
-  { path: 'admin', component: HomeAdminComponent, canActivate: [AuthGuard] },
+  { path: 'admin', component: HomeAdminComponent, canActivate: [AuthGuard], data: { role: ADMIN } },
   {
     path: 'admin/carreras',
     canActivate: [AuthGuard],
     loadComponent: () =>
       import('./modules/admin/carreras/main-carreras/main-carreras.component')
-        .then(m => m.MainCarrerasComponent)
+        .then(m => m.MainCarrerasComponent),
+    data: { role: ADMIN }
   },
   {
     path: 'admin/asignaturas',
@@ -45,21 +57,24 @@ export const routes: Routes = [
     canActivate: [AuthGuard],
     loadComponent: () =>
       import('./modules/admin/usuarios/main-usuarios/main-usuarios.component')
-        .then(m => m.MainUsuariosComponent)
+        .then(m => m.MainUsuariosComponent),
+    data: { role: ADMIN }
   },
   {
     path: 'admin/contenidos',
     canActivate: [AuthGuard],
     loadComponent: () =>
       import('./modules/contenidos/main-contenidos/main-contenidos.component')
-        .then(m => m.MainContenidosComponent)
+        .then(m => m.MainContenidosComponent),
+    data: { role: ESTRUCTURA }
   },
   {
     path: 'admin/ra',
     canActivate: [AuthGuard],
     loadComponent: () =>
       import('./modules/competencia-ra/ra-main/ra-main.component')
-        .then(m => m.MainRaComponent)
+        .then(m => m.MainRaComponent),
+    data: { role: ESTRUCTURA }
   },
   {
     path: 'admin/asignaturas-hito',
@@ -67,7 +82,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./modules/rubricas/main-asignaturas-jefe/main-asignaturas-jefe.component')
         .then(m => m.MainAsignaturasJefeComponent),
-    data: { role: ['Administrador', 'Profesor'] }
+    data: { role: ['Administrador', 'Profesor', 'Jefe de Carrera'] }
   },
   {
     path: 'admin/analitica',
@@ -75,26 +90,28 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./modules/analitica/analitica.module')
         .then(m => m.AnaliticaModule),
-    data: { role: ['Administrador', 'Jefe de Carrera', 'Comité Curricular'] }
+    data: { role: ANALITICA }
   },
 
   // ==============================
   // JEFE DE CARRERA
   // ==============================
-  { path: 'jefe-carrera', component: HomeJefeCarreraComponent, canActivate: [AuthGuard] },
+  { path: 'jefe-carrera', component: HomeJefeCarreraComponent, canActivate: [AuthGuard], data: { role: JEFE } },
   {
     path: 'jefe-carrera/asignaturas',
     canActivate: [AuthGuard],
     loadComponent: () =>
       import('./modules/rubricas/main-asignaturas-jefe/main-asignaturas-jefe.component')
-        .then(m => m.MainAsignaturasJefeComponent)
+        .then(m => m.MainAsignaturasJefeComponent),
+    data: { role: ['Administrador', 'Jefe de Carrera'] }
   },
   {
     path: 'jefe-carrera/ra',
     canActivate: [AuthGuard],
     loadComponent: () =>
       import('./modules/competencia-ra/ra-main/ra-main.component')
-        .then(m => m.MainRaComponent)
+        .then(m => m.MainRaComponent),
+    data: { role: ['Administrador', 'Jefe de Carrera', 'Comité Curricular'] }
   },
   {
     path: 'jefe-carrera/analitica',
@@ -102,15 +119,16 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./modules/analitica/analitica.module')
         .then(m => m.AnaliticaModule),
-    data: { role: ['Administrador', 'Jefe de Carrera', 'Comité Curricular'] }
+    data: { role: ANALITICA }
   },
 
   // ==============================
-  // PROFESOR (Lazy-loaded module)
+  // PROFESOR
   // ==============================
   {
     path: 'profesor',
     canActivate: [AuthGuard],
+    data: { role: PROFESOR },
     loadChildren: () =>
       import('./modules/profesor/profesor.module').then(m => m.ProfesorModule)
   },
@@ -120,24 +138,25 @@ export const routes: Routes = [
   // ==============================
   {
     path: 'comite',
+    component: HomeComiteComponent,
     canActivate: [AuthGuard],
-    loadComponent: () =>
-      import('./modules/comite/home/home.component')
-        .then(m => m.HomeComponent)
+    data: { role: ['Comité Curricular', 'Administrador'] }
   },
   {
     path: 'comite/ra',
     canActivate: [AuthGuard],
     loadComponent: () =>
       import('./modules/competencia-ra/ra-main/ra-main.component')
-        .then(m => m.MainRaComponent)
+        .then(m => m.MainRaComponent),
+    data: { role: ['Administrador', 'Jefe de Carrera', 'Comité Curricular'] }
   },
   {
     path: 'comite/contenidos',
     canActivate: [AuthGuard],
     loadComponent: () =>
       import('./modules/contenidos/main-contenidos/main-contenidos.component')
-        .then(m => m.MainContenidosComponent)
+        .then(m => m.MainContenidosComponent),
+    data: { role: ESTRUCTURA }
   },
   {
     path: 'comite/analitica',
@@ -145,11 +164,21 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./modules/analitica/analitica.module')
         .then(m => m.AnaliticaModule),
-    data: { role: ['Administrador', 'Jefe de Carrera', 'Comité Curricular'] }
+    data: { role: ANALITICA }
   },
 
   // ==============================
-  // Fallback 404 -> login (ajusta si tienes una página 404 propia)
+  // DECANO (solo lectura, carreras de su Facultad)
+  // ==============================
+  {
+    path: 'decano',
+    component: DecanoHomeComponent,
+    canActivate: [AuthGuard],
+    data: { role: DECANO }
+  },
+
+  // ==============================
+  // Fallback 404 -> login
   // ==============================
   { path: '**', redirectTo: 'login' }
 ];

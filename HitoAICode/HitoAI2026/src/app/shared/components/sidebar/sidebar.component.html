@@ -159,6 +159,17 @@
            <span class="nav-icon-wrapper"><i class="bi bi-graph-up-arrow nav-icon"></i></span><span class="nav-text">Análisis Competencias</span></a>
       </li>
     </ng-container>
+
+    <!-- DECANO -->
+    <ng-container *ngIf="rol === 'Decano'">
+      <li class="nav-item">
+        <a class="nav-link text-navbar"
+           routerLink="/decano"
+           routerLinkActive="active"
+           [routerLinkActiveOptions]="{ exact: true }">
+           <span class="nav-icon-wrapper"><i class="bi bi-house-door-fill nav-icon"></i></span><span class="nav-text">Inicio</span></a>
+      </li>
+    </ng-container>
   </ul>
 
   <!-- Botones inferiores -->

@@ -39,14 +39,18 @@ export class LoginComponent {
       next: (res: any) => {
         const rol = res?.Rol?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+        localStorage.setItem('token', res.token);
         localStorage.setItem('rol', res.Rol);
         localStorage.setItem('rut', res.ID_Usuario); // En el futuro puedes cambiar 'rut' por 'usuario' si prefieres
         localStorage.setItem('nombre', res.Nombre);
+        if (res.carreraId != null) localStorage.setItem('carreraId', String(res.carreraId));
+        if (res.facultadId != null) localStorage.setItem('facultadId', String(res.facultadId));
 
         if (rol === 'administrador') this.router.navigate(['/admin']);
         else if (rol === 'jefe de carrera') this.router.navigate(['/jefe-carrera']);
         else if (rol === 'profesor') this.router.navigate(['/profesor']);
         else if (rol === 'comite curricular') this.router.navigate(['/comite']);
+        else if (rol === 'decano') this.router.navigate(['/decano']);
         else alert('⚠️ Rol no reconocido');
       },
       error: (err) => {

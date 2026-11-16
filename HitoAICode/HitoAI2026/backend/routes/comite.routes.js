@@ -5,6 +5,21 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
+const { verifyAuth, authorizeRoles, normalize } = require('../middleware/auth.middleware');
+
+// Solo Comité Curricular y Administrador. El comité queda limitado a SU carrera:
+// el parámetro ?carrera del cliente se ignora y se fuerza el del token.
+router.use(verifyAuth);
+router.use(authorizeRoles('Comité Curricular', 'Administrador'));
+router.use((req, res, next) => {
+  if (normalize(req.user.rol) !== 'administrador') {
+    if (!req.user.carreraId) {
+      return res.status(403).json({ error: 'Tu usuario no tiene una carrera asignada' });
+    }
+    req.query.carrera = req.user.carreraId;
+  }
+  next();
+});
 
 router.get('/dashboard', async (req, res) => {
   console.log('[ComiteDashboard] 📡 GET /dashboard', req.query);
@@ -15,9 +30,13 @@ router.get('/dashboard', async (req, res) => {
       ? parseInt(req.query.plan, 10) : null;
 
     // ---- Filtros ----
-    const [carreras] = await pool.query(
+    const [carrerasRaw] = await pool.query(
       `SELECT ID_Carrera AS id, Nombre AS nombre FROM carrera ORDER BY Nombre`
     );
+    // No-admin solo ve su propia carrera en el selector
+    const carreras = normalize(req.user.rol) === 'administrador'
+      ? (carrerasRaw || [])
+      : (carrerasRaw || []).filter(c => Number(c.id) === Number(req.user.carreraId));
 
     let planesSql = `
       SELECT DISTINCT Plan_Academico AS id,

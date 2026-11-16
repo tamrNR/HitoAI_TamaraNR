@@ -1,9 +1,15 @@
 const CarreraService = require('../services/carrera.service');
 const { validateLengths } = require('../utils/validateLengths');
+const { scopeDesdeUsuario } = require('../middleware/auth.middleware');
 
 exports.getAllCarreras = async (req, res) => {
-  const carreras = await CarreraService.getAll();
-  res.json(carreras);
+  try {
+    const carreras = await CarreraService.getAll(scopeDesdeUsuario(req.user));
+    res.json(carreras);
+  } catch (error) {
+    console.error('Error al obtener carreras:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
 };
 
 exports.crearCarrera = async (req, res) => {

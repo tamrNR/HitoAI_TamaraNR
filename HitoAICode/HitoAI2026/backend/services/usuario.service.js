@@ -2,11 +2,17 @@ const connection = require('../db/connection');
 const bcrypt = require('bcryptjs');
 
 // Crear nuevo usuario
-exports.crearUsuario = async (ID_Usuario, Nombre, Clave, Rol_ID_Rol) => {
+exports.crearUsuario = async (ID_Usuario, Nombre, Clave, Rol_ID_Rol, Facultad_ID_Facultad = null) => {
   const hashedClave = await bcrypt.hash(Clave, 10);
-  const sql = `INSERT INTO usuario (ID_Usuario, Nombre, Clave, Rol_ID_Rol) VALUES (?, ?, ?, ?)`;
+  const tieneFacultad = Facultad_ID_Facultad !== null && Facultad_ID_Facultad !== undefined && Facultad_ID_Facultad !== '';
+  const sql = tieneFacultad
+    ? `INSERT INTO usuario (ID_Usuario, Nombre, Clave, Rol_ID_Rol, Facultad_ID_Facultad) VALUES (?, ?, ?, ?, ?)`
+    : `INSERT INTO usuario (ID_Usuario, Nombre, Clave, Rol_ID_Rol) VALUES (?, ?, ?, ?)`;
+  const params = tieneFacultad
+    ? [ID_Usuario, Nombre, hashedClave, Rol_ID_Rol, Facultad_ID_Facultad]
+    : [ID_Usuario, Nombre, hashedClave, Rol_ID_Rol];
   return new Promise((resolve, reject) => {
-    connection.query(sql, [ID_Usuario, Nombre, hashedClave, Rol_ID_Rol], (err, results) => {
+    connection.query(sql, params, (err, results) => {
       if (err) return reject(err);
       resolve(results);
     });
@@ -16,7 +22,9 @@ exports.crearUsuario = async (ID_Usuario, Nombre, Clave, Rol_ID_Rol) => {
 // Validar login y retornar detalle de errores
 exports.validarLogin = (rut, clave) => {
   const sql = `
-    SELECT u.ID_Usuario, u.Nombre, u.Clave, r.Nombre AS Rol
+    SELECT u.ID_Usuario, u.Nombre, u.Clave, u.Facultad_ID_Facultad, r.Nombre AS Rol,
+           (SELECT c.ID_Carrera FROM carrera c
+            WHERE c.usuario_ID_Usuario = u.ID_Usuario LIMIT 1) AS Carrera_ID
     FROM usuario u
     JOIN rol r ON u.Rol_ID_Rol = r.ID_Rol
     WHERE u.ID_Usuario = ?
@@ -33,7 +41,9 @@ exports.validarLogin = (rut, clave) => {
       resolve({
         ID_Usuario: usuario.ID_Usuario,
         Nombre: usuario.Nombre,
-        Rol: usuario.Rol
+        Rol: usuario.Rol,
+        Facultad_ID_Facultad: usuario.Facultad_ID_Facultad ?? null,
+        Carrera_ID: usuario.Carrera_ID ?? null
       });
     });
   });

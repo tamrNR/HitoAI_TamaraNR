@@ -2,18 +2,49 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/inscripcion.controller');
 const connection = require('../db/connection');
+const { verifyAuth, authorizeRoles, scopeAsignatura } = require('../middleware/auth.middleware');
 
-// Crear inscripciones masivas
-router.post('/crear-masivo', controller.crearMasivo);
+const ROLES_LECTURA = ['Administrador', 'Profesor', 'Jefe de Carrera', 'Comité Curricular'];
+const ROLES_ESCRITURA = ['Administrador', 'Jefe de Carrera'];
+
+router.use(verifyAuth);
+
+// Crear inscripciones masivas (cada inscripción se valida contra el ámbito de su asignatura)
+router.post('/crear-masivo', authorizeRoles(...ROLES_ESCRITURA), async (req, res, next) => {
+  const { inscripciones } = req.body || {};
+  if (!Array.isArray(inscripciones) || inscripciones.length === 0) {
+    return res.status(400).json({ message: 'Se requiere un array de inscripciones' });
+  }
+  // Todas las inscripciones deben pertenecer a asignaturas dentro del ámbito del usuario
+  const asignaturas = [...new Set(inscripciones.map(i => i?.asignatura_ID_Asignatura).filter(Boolean))];
+  if (asignaturas.length === 0) {
+    return res.status(400).json({ message: 'Inscripciones sin asignatura' });
+  }
+  try {
+    const { obtenerScopeAsignatura, usuarioPuedeVerAsignatura } = require('../middleware/auth.middleware');
+    for (const id of asignaturas) {
+      const asignatura = await obtenerScopeAsignatura(id);
+      if (!asignatura || !usuarioPuedeVerAsignatura(req.user, asignatura)) {
+        return res.status(403).json({ error: 'No autorizado: la asignatura no pertenece a tu ámbito' });
+      }
+    }
+    next();
+  } catch (e) {
+    console.error('[Inscripcion] Error verificando scope:', e?.message || e);
+    return res.status(500).json({ error: 'Error al verificar permisos' });
+  }
+}, controller.crearMasivo);
 
 // Obtener estudiantes inscritos por asignatura
-router.get('/por-asignatura/:id', controller.obtenerPorAsignatura);
+router.get('/por-asignatura/:id',
+  authorizeRoles(...ROLES_LECTURA), scopeAsignatura((req) => req.params.id), controller.obtenerPorAsignatura);
 
-// Eliminar inscripción (requiere query params: ?asignatura=...&estudiante=...)
-router.delete('/eliminar', controller.eliminar);
+// Eliminar inscripción (query params: ?asignatura=...&estudiante=...&anio=...)
+router.delete('/eliminar',
+  authorizeRoles(...ROLES_ESCRITURA), scopeAsignatura((req) => req.query.asignatura), controller.eliminar);
 
 // Obtener alumnos inscritos (activos) de un curso por asignatura (query param)
-router.get('/alumnos-curso', (req, res) => {
+router.get('/alumnos-curso', authorizeRoles(...ROLES_LECTURA), scopeAsignatura((req) => req.query.asignatura), (req, res) => {
   const { asignatura, anio } = req.query;
 
   if (!asignatura) {

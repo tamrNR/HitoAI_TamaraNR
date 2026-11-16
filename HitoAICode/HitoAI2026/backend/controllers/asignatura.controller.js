@@ -1,14 +1,34 @@
 const AsignaturaService = require('../services/asignatura.service');
 const { validateLengths } = require('../utils/validateLengths');
+const { normalize, scopeDesdeUsuario } = require('../middleware/auth.middleware');
 
 exports.obtenerTodas = async (req, res) => {
-  const data = await AsignaturaService.obtenerTodas();
-  res.json(data);
+  try {
+    const data = await AsignaturaService.obtenerTodas(scopeDesdeUsuario(req.user));
+    res.json(data);
+  } catch (error) {
+    console.error('Error al obtener asignaturas:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
 };
+
+// Solo el propio usuario (o Administrador) puede consultar por su RUT
+const esSelfOAdmin = (req, rut) =>
+  req.user && (normalize(req.user.rol) === 'administrador' || String(req.user.id) === String(rut));
 
 exports.obtenerPorCarreraDelJefe = async (req, res) => {
   const rutJefe = req.params.rut;
   try {
+    if (!esSelfOAdmin(req, rutJefe)) {
+      // Comité Curricular: solo puede consultar la carrera que tiene asignada
+      if (!req.user || normalize(req.user.rol) !== 'comite curricular') {
+        return res.status(403).json({ message: 'No autorizado: solo puedes consultar tu propia carrera' });
+      }
+      const carreraIdObjetivo = await AsignaturaService.obtenerCarreraIdPorJefe(rutJefe);
+      if (Number(carreraIdObjetivo) !== Number(req.user.carreraId)) {
+        return res.status(403).json({ message: 'No autorizado: la carrera no pertenece a tu ámbito' });
+      }
+    }
     const data = await AsignaturaService.obtenerPorCarreraDelJefe(rutJefe);
     res.json(data);
   } catch (error) {
@@ -19,6 +39,9 @@ exports.obtenerPorCarreraDelJefe = async (req, res) => {
 
 exports.obtenerPorProfesor = async (req, res) => {
   const rut = req.params.rut;
+  if (!esSelfOAdmin(req, rut)) {
+    return res.status(403).json({ message: 'No autorizado: solo puedes consultar tus propias asignaturas' });
+  }
   try {
     const data = await AsignaturaService.obtenerPorProfesor(rut);
     res.json(data);

@@ -7,7 +7,7 @@ exports.obtenerPorContenido = async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('❌ ERROR AL OBTENER INDICADORES:', err);
-    res.status(500).json({ message: 'Error al obtener indicadores', error: err });
+    res.status(500).json({ message: 'Error al obtener indicadores' });
   }
 };
 
@@ -26,7 +26,7 @@ exports.crear = async (req, res) => {
     res.status(201).json({ message: 'Indicador creado' });
   } catch (err) {
     console.error('❌ ERROR AL CREAR INDICADOR:', err);
-    res.status(500).json({ message: 'Error al crear indicador', error: err });
+    res.status(500).json({ message: 'Error al crear indicador' });
   }
 };
 
@@ -45,7 +45,7 @@ exports.actualizar = async (req, res) => {
     res.json({ message: 'Indicador actualizado' });
   } catch (err) {
     console.error('❌ ERROR AL ACTUALIZAR INDICADOR:', err);
-    res.status(500).json({ message: 'Error al actualizar indicador', error: err });
+    res.status(500).json({ message: 'Error al actualizar indicador' });
   }
 };
 

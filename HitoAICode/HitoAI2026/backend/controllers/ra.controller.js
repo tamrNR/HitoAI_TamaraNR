@@ -25,7 +25,7 @@ exports.crearRA = async (req, res) => {
     res.status(201).json({ message: 'Resultado de Aprendizaje creado con éxito' });
   } catch (error) {
     console.error('Error al crear RA:', error);
-    res.status(500).json({ message: 'Error al crear RA', error: error.message });
+    res.status(500).json({ message: 'Error al crear RA' });
   }
 };
 
@@ -46,7 +46,7 @@ exports.actualizarRA = async (req, res) => {
     res.json({ message: 'Resultado de Aprendizaje actualizado correctamente' });
   } catch (error) {
     console.error('Error al actualizar RA:', error);
-    res.status(500).json({ message: 'Error al actualizar RA', error: error.message });
+    res.status(500).json({ message: 'Error al actualizar RA' });
   }
 };
 
@@ -63,7 +63,7 @@ exports.eliminarRA = async (req, res) => {
     await RaService.eliminar(id);
     res.json({ message: 'Resultado de Aprendizaje eliminado' });
   } catch (error) {
-    res.status(500).json({ message: 'Error al eliminar RA', error: error.message });
+    res.status(500).json({ message: 'Error al eliminar RA' });
   }
 };
 exports.getRAByAsignatura = async (req, res) => {
@@ -71,7 +71,7 @@ exports.getRAByAsignatura = async (req, res) => {
     const resultados = await RaService.getByAsignatura(req.params.id);
     res.json(resultados);
   } catch (error) {
-    res.status(500).json({ message: 'Error al obtener RA por asignatura', error: error.message });
+    res.status(500).json({ message: 'Error al obtener RA por asignatura' });
   }
 };
 exports.getRAByContenido = async (req, res) => {
@@ -80,7 +80,7 @@ exports.getRAByContenido = async (req, res) => {
     const resultados = await RaService.getByAsignatura(contenido.asignatura_ID_Asignatura);
     res.json(resultados);
   } catch (error) {
-    res.status(500).json({ message: 'Error al obtener RA por contenido', error: error.message });
+    res.status(500).json({ message: 'Error al obtener RA por contenido' });
   }
 };
 

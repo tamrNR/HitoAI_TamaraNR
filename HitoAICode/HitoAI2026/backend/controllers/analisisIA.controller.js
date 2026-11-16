@@ -64,12 +64,18 @@ async function generarAnalisisIA(req, res) {
       });
     }
 
-    // Hash estable de filtros
+    // Hash estable de filtros (incluye el ámbito del usuario para no compartir caché entre roles/alcances)
+    const alcance = {
+      rol: req.user?.rol || null,
+      carreraId: req.user?.carreraId ?? null,
+      facultadId: req.user?.facultadId ?? null
+    };
     const filtrosHash = buildFiltrosHash({
       tipoGrafico,
       context: contextSanitizado,
       chart: chartEnriched,
-      promptVersion
+      promptVersion,
+      alcance
     });
     console.log('[AnalisisIA] hash:', filtrosHash);
 
@@ -158,7 +164,12 @@ async function generarAnalisisIA(req, res) {
       const chart = sanitizarChart(body.chart || {}, tipoGrafico);
       const metrics = computeMetrics({ chart, tipoGrafico, umbral: context.umbral });
       const chartEnriched = { ...chart, computed: metrics };
-      const filtrosHash = buildFiltrosHash({ tipoGrafico, context, chart: chartEnriched, promptVersion });
+      const alcanceErr = {
+        rol: req.user?.rol || null,
+        carreraId: req.user?.carreraId ?? null,
+        facultadId: req.user?.facultadId ?? null
+      };
+      const filtrosHash = buildFiltrosHash({ tipoGrafico, context, chart: chartEnriched, promptVersion, alcance: alcanceErr });
       await updateError({
         tipoGrafico,
         filtrosHash,

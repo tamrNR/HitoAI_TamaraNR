@@ -40,8 +40,8 @@ function sha256(input) {
   return crypto.createHash('sha256').update(String(input)).digest('hex');
 }
 
-function buildFiltrosHash({ tipoGrafico, context, chart, promptVersion }) {
-  const payload = { tipoGrafico, context, chart, promptVersion };
+function buildFiltrosHash({ tipoGrafico, context, chart, promptVersion, alcance }) {
+  const payload = { tipoGrafico, context, chart, promptVersion, alcance: alcance || null };
   return sha256(stableStringify(payload));
 }
 

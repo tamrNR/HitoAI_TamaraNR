@@ -4,30 +4,50 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
+const { verifyAuth, authorizeRoles, normalize, scopeAsignatura, scopeCarrera } = require('../middleware/auth.middleware');
 
-// ✅ GET /api/analitica/carreras - Obtener todas las carreras
+const ROLES_ANALITICA = ['Administrador', 'Jefe de Carrera', 'Comité Curricular', 'Decano'];
+
+router.use(verifyAuth);
+router.use(authorizeRoles(...ROLES_ANALITICA));
+
+// Carrera del usuario para roles con alcance único (Jefe/Comité)
+const carreraForzada = (req) => {
+  const rol = normalize(req.user.rol);
+  if (rol === 'jefe de carrera' || rol === 'comite curricular') return req.user.carreraId;
+  return null;
+};
+
+// ✅ GET /api/analitica/carreras - Carreras dentro del ámbito del usuario
 router.get('/carreras', async (req, res) => {
   console.log('[AnaliticaFiltros] 📡 GET /carreras');
-  const sql = `
-    SELECT 
-      ID_Carrera as id,
-      Nombre as nombre
-    FROM carrera
-    ORDER BY Nombre
+  const rol = normalize(req.user.rol);
+  let sql = `
+    SELECT c.ID_Carrera as id, c.Nombre as nombre
+    FROM carrera c
   `;
+  const params = [];
+  if (rol === 'jefe de carrera' || rol === 'comite curricular') {
+    sql += ` WHERE c.ID_Carrera = ?`;
+    params.push(req.user.carreraId ?? -1);
+  } else if (rol === 'decano') {
+    sql += ` WHERE c.facultad_ID_Facultad = ?`;
+    params.push(req.user.facultadId ?? -1);
+  }
+  sql += ` ORDER BY c.Nombre`;
   try {
-    const [rows] = await pool.query(sql);
+    const [rows] = await pool.query(sql, params);
     const out = Array.isArray(rows) ? rows : [];
     console.log('[AnaliticaFiltros] ✅ Carreras obtenidas:', out.length);
     return res.json(out);
   } catch (err) {
-    console.error('[AnaliticaFiltros] ❌ Error al obtener carreras:', err);
+    console.error('[AnaliticaFiltros] ❌ Error al obtener carreras:', err?.message || err);
     return res.status(500).json({ error: 'Error al obtener carreras' });
   }
 });
 
 // ✅ GET /api/analitica/planes?carrera={id} - Obtener planes de una carrera
-router.get('/planes', async (req, res) => {
+router.get('/planes', scopeCarrera((req) => req.query.carrera), async (req, res) => {
   const { carrera } = req.query;
   console.log('[AnaliticaFiltros] 📡 GET /planes - Carrera:', carrera);
   if (!carrera) {
@@ -47,7 +67,7 @@ router.get('/planes', async (req, res) => {
     console.log('[AnaliticaFiltros] ✅ Planes obtenidos:', out.length);
     return res.json(out);
   } catch (err) {
-    console.error('[AnaliticaFiltros] ❌ Error al obtener planes:', err);
+    console.error('[AnaliticaFiltros] ❌ Error al obtener planes:', err?.message || err);
     return res.status(500).json({ error: 'Error al obtener planes' });
   }
 });
@@ -68,7 +88,7 @@ router.get('/cohortes', async (req, res) => {
     console.log(`[AnaliticaFiltros] ✅ Cohortes obtenidas: ${out.length}`);
     return res.json(out);
   } catch (err) {
-    console.error('[AnaliticaFiltros] ❌ Error al obtener cohortes:', err);
+    console.error('[AnaliticaFiltros] ❌ Error al obtener cohortes:', err?.message || err);
     return res.status(500).json({ error: 'Error al obtener cohortes' });
   }
 });
@@ -76,7 +96,7 @@ router.get('/cohortes', async (req, res) => {
 // ✅ GET /api/analitica/semestres - Obtener semestres disponibles
 router.get('/semestres', (req, res) => {
   console.log('[AnaliticaFiltros] 📡 GET /semestres');
-  
+
   // Semestres del 1 al 10
   const semestres = [];
   for (let i = 1; i <= 10; i++) {
@@ -85,14 +105,18 @@ router.get('/semestres', (req, res) => {
       nombre: `Semestre ${i}`
     });
   }
-  
+
   console.log('[AnaliticaFiltros] ✅ Semestres generados:', semestres.length);
   res.json(semestres);
 });
 
 // ✅ GET /api/analitica/asignaturas?carrera={id}&plan={año} - Obtener asignaturas
-router.get('/asignaturas', async (req, res, next) => {
-  const carrera = req.query.carrera != null && req.query.carrera !== '' ? parseInt(req.query.carrera, 10) : null;
+router.get('/asignaturas', scopeCarrera((req) => {
+  // Jefe/Comité: forzar su carrera; Decano/Admin: usar la del query
+  return carreraForzada(req) ?? req.query.carrera;
+}), async (req, res) => {
+  const forzada = carreraForzada(req);
+  const carrera = forzada ?? (req.query.carrera != null && req.query.carrera !== '' ? parseInt(req.query.carrera, 10) : null);
   const plan = req.query.plan != null && req.query.plan !== '' ? parseInt(req.query.plan, 10) : null;
   const semestre = req.query.semestre != null && req.query.semestre !== '' ? parseInt(req.query.semestre, 10) : null;
   console.log('[AnaliticaFiltros] 📡 GET /asignaturas', { carrera, plan, semestre });
@@ -112,6 +136,14 @@ router.get('/asignaturas', async (req, res, next) => {
     if (carrera !== null && !Number.isNaN(carrera)) {
       where.push('a.carrera_ID_Carrera = ?');
       params.push(carrera);
+    } else if (forzada) {
+      // Sin carrera explícita, limitar a la carrera del usuario
+      where.push('a.carrera_ID_Carrera = ?');
+      params.push(forzada);
+    } else if (normalize(req.user.rol) === 'decano') {
+      // Decano sin carrera explícita: limitar a las carreras de su facultad
+      where.push('a.carrera_ID_Carrera IN (SELECT ID_Carrera FROM carrera WHERE facultad_ID_Facultad = ?)');
+      params.push(req.user.facultadId ?? -1);
     }
     where.push("(a.Estado = 'Activo' OR a.Estado IS NULL)");
 
@@ -129,13 +161,13 @@ router.get('/asignaturas', async (req, res, next) => {
     console.log(`[AnaliticaFiltros] ✅ Asignaturas obtenidas: ${out.length}`);
     return res.status(200).json(out);
   } catch (err) {
-    console.error('[AnaliticaFiltros] ❌ Error en /asignaturas:', err);
+    console.error('[AnaliticaFiltros] ❌ Error en /asignaturas:', err?.message || err);
     return res.status(500).json({ error: 'Error al obtener asignaturas' });
   }
 });
 
 // ✅ GET /api/analitica/alumnos?asignatura={id}&cohorte={año} - Obtener alumnos
-router.get('/alumnos', async (req, res) => {
+router.get('/alumnos', scopeAsignatura((req) => req.query.asignatura), async (req, res) => {
   const asignatura = String(req.query.asignatura || '').trim();
   const cohorte = parseInt(req.query.cohorte, 10);
   console.log('[AnaliticaFiltros] 📡 GET /alumnos - Asignatura:', asignatura, 'Cohorte:', cohorte);
@@ -161,7 +193,7 @@ router.get('/alumnos', async (req, res) => {
     console.log(`[AnaliticaFiltros] ✅ Alumnos obtenidos: ${out.length}`);
     return res.json(out);
   } catch (err) {
-    console.error('[AnaliticaFiltros] ❌ Error al obtener alumnos:', err);
+    console.error('[AnaliticaFiltros] ❌ Error al obtener alumnos:', err?.message || err);
     return res.status(500).json({ error: 'Error al obtener alumnos' });
   }
 });

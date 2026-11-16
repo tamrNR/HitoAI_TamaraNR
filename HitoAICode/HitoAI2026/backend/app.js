@@ -4,6 +4,7 @@
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
@@ -16,33 +17,35 @@ process.on('uncaughtException', (err) => {
   console.error('🛡️ UncaughtException capturado:', err);
 });
 
-// === CORS UNIVERSAL PARA DESARROLLO LOCAL ===
+app.use(helmet());
+
+// === CORS ===
+// Orígenes permitidos: CORS_ORIGIN (separados por coma) + localhost/127.0.0.1 en desarrollo
+const origenesEnv = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+const regexLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Permitir peticiones sin origen (Postman, Thunder Client, etc.)
+    // Peticiones sin origen (Postman,Thunder Client, mismo origen) se permiten:
+    // la autenticación real es el JWT, no la cookie de sesión
     if (!origin) {
-      console.log('✅ Petición sin origen permitida (Postman/Thunder Client)');
       return callback(null, true);
     }
-    
-    // Permitir CUALQUIER puerto en localhost o 127.0.0.1
-    const regexLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
-    if (regexLocal.test(origin)) {
-      console.log('✅ CORS permitido para:', origin);
+    if (origenesEnv.includes(origin) || regexLocal.test(origin)) {
       return callback(null, true);
     }
-    
-    // Bloquear otros orígenes
-    console.log('❌ Bloqueado por CORS:', origin);
     return callback(new Error('No autorizado por CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'x-user-role']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // === RUTAS ===
 console.log('🧩 Cargando rutas...');
@@ -65,13 +68,13 @@ const graficosRoutes = require('./routes/graficos.routes'); // ✅ Gráficos de 
 const analiticaFiltrosRoutes = require('./routes/analitica-filtros.routes'); // ✅ Filtros de analítica
 const facultadRoutes = require('./routes/facultad.routes');
 const comiteRoutes = require('./routes/comite.routes'); // ✅ Panel Comité Curricular
-const { authorizeRoles } = require('./middleware/auth.middleware');
+const { verifyAuth } = require('./middleware/auth.middleware');
 
-// Registrar rutas
+// Registrar rutas (la autorización por rol/scope vive dentro de cada router)
 app.use('/api/usuario', usuarioRoutes);
 app.use('/api/aplicacion', aplicacionRoutes);
 app.use('/api/asignatura', asignaturaRoutes);
-app.use('/api/carrera', authorizeRoles('Administrador', 'Jefe de Carrera'), carreraRoutes);
+app.use('/api/carrera', carreraRoutes);
 app.use('/api/competencia', competenciaRoutes);
 app.use('/api/contenido', contenidoRoutes);
 app.use('/api/estudiante', estudianteRoutes);
@@ -81,12 +84,12 @@ app.use('/api/inscripcion', inscripcionRoutes);
 app.use('/api/ra', raRoutes);
 app.use('/api/reporte', reporteRoutes);
 app.use('/api/rol', rolRoutes);
-app.use('/api/analisis', authorizeRoles('Administrador', 'Jefe de Carrera', 'Comité Curricular'), analisisRoutes);
-app.use('/api/graficos', authorizeRoles('Administrador', 'Jefe de Carrera', 'Comité Curricular'), graficosRoutes); // ✅ Gráficos de analítica con autorización
-app.use('/api/analitica', authorizeRoles('Administrador', 'Jefe de Carrera', 'Comité Curricular'), analiticaFiltrosRoutes); // ✅ Filtros de analítica con autorización
-app.use('/api/analitica-filtros', authorizeRoles('Administrador', 'Jefe de Carrera', 'Comité Curricular'), analiticaFiltrosRoutes); // ✅ Alias solicitado con autorización
+app.use('/api/analisis', analisisRoutes);
+app.use('/api/graficos', graficosRoutes);
+app.use('/api/analitica', analiticaFiltrosRoutes);
+app.use('/api/analitica-filtros', analiticaFiltrosRoutes);
 app.use('/api/facultad', facultadRoutes);
-app.use('/api/comite', authorizeRoles('Comité Curricular'), comiteRoutes); // ✅ Panel Comité Curricular
+app.use('/api/comite', comiteRoutes);
 
 console.log('✅ Todas las rutas cargadas correctamente');
 
@@ -96,39 +99,56 @@ app.get('/', (req, res) => {
 });
 
 // === RUTA DE PRUEBA CORS ===
-app.get('/api/test', (req, res) => {
-  console.log('[Test] 📡 Petición de prueba CORS desde:', req.headers.origin || 'Sin origen');
-  res.json({ 
-    mensaje: '✅ CORS funcionando correctamente',
-    origen: req.headers.origin || 'Sin origen',
+app.get('/api/test', verifyAuth, (req, res) => {
+  res.json({
+    mensaje: '✅ API funcionando correctamente',
     timestamp: new Date().toISOString()
   });
 });
 
 // === INICIO SERVIDOR ===
 const PORT = process.env.PORT || 8080; // ✅ Cambiado a 8080 para coincidir con Angular
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-  console.log(`📡 API disponible en http://localhost:${PORT}/api`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`📡 API disponible en http://localhost:${PORT}/api`);
+  });
+}
 
 // === CONEXIÓN BD ===
 const connection = require('./db/connection');
-connection.connect(err => {
-  if (err) throw err;
-  console.log('✅ Conectado a la base de datos MySQL');
-});
+if (require.main === module) {
+  connection.connect(err => {
+    if (err) {
+      console.error('❌ Error de conexión a MySQL:', err.message);
+      return;
+    }
+    console.log('✅ Conectado a la base de datos MySQL');
+  });
+}
 
 // === Middleware de manejo de errores (último) ===
 app.use((err, req, res, next) => {
   try {
-    console.error('🔥 Error no manejado en middleware:', err);
+    console.error('🔥 Error no manejado en middleware:', err?.message || err);
     if (res.headersSent) {
       return next(err);
     }
-    res.status(500).json({ error: 'Error interno del servidor' });
+    // No exponer trazas ni detalles internos al cliente
+    if (err?.message === 'No autorizado por CORS') {
+      return res.status(403).json({ error: 'No autorizado por CORS' });
+    }
+    if (err?.name === 'MulterError') {
+      const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      return res.status(status).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'Archivo demasiado grande' : 'Error al procesar el archivo' });
+    }
+    const status = err?.status || err?.statusCode || 500;
+    const mensaje = status >= 500 ? 'Error interno del servidor' : (err.message || 'Solicitud inválida');
+    res.status(status).json({ error: mensaje });
   } catch (e) {
     console.error('🔥 Error al responder desde el middleware de errores:', e);
     // Evitar caída silenciosa
   }
 });
+
+module.exports = app;

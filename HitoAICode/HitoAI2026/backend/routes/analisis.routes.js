@@ -6,12 +6,20 @@ const router = express.Router();
 const connection = require('../db/connection');
 const { generarAnalisisIA, obtenerAnalisisPorId } = require('../controllers/analisisIA.controller');
 const calcularNivel = require('../utils/calcularNivel');
+const { verifyAuth, authorizeRoles, scopeAsignatura } = require('../middleware/auth.middleware');
+const { iaLimiter } = require('../middleware/rateLimit.middleware');
+
+const ROLES_ANALITICA = ['Administrador', 'Jefe de Carrera', 'Comité Curricular', 'Decano'];
+const scopeQueryAsignatura = scopeAsignatura((req) => req.query.asignatura);
+
+router.use(verifyAuth);
+router.use(authorizeRoles(...ROLES_ANALITICA));
 
 // =========================================
 // 1. ANÁLISIS POR CURSO / COHORTE
 // Ejemplo: /api/analisis/curso?asignatura=TIS800&anio=2025&semestre=8
 // =========================================
-router.get('/curso', (req, res) => {
+router.get('/curso', scopeQueryAsignatura, (req, res) => {
   const { asignatura, anio, semestre } = req.query;
 
   if (!asignatura || !anio || !semestre) {
@@ -38,9 +46,7 @@ router.get('/curso', (req, res) => {
 
   connection.query(sqlCompetencias, [asignatura, anio, semestre], (err, competencias) => {
     if (err) {
-      console.error('[AnalisisCurso] Error en consulta Competencias:', err);
-      console.error('[AnalisisCurso] SQL:', sqlCompetencias);
-      console.error('[AnalisisCurso] Parámetros:', [asignatura, anio, semestre]);
+      console.error('[AnalisisCurso] Error en consulta Competencias:', err?.message || err);
       return res.status(500).json({ error: 'Error al obtener Competencias' });
     }
 
@@ -49,8 +55,6 @@ router.get('/curso', (req, res) => {
     connection.query(sqlRAs, [asignatura, anio, semestre], (err, ras) => {
       if (err) {
         console.error('[AnalisisCurso] Error en consulta RAs:', err);
-        console.error('[AnalisisCurso] SQL:', sqlRAs);
-        console.error('[AnalisisCurso] Parámetros:', [asignatura, anio, semestre]);
         return res.status(500).json({ error: 'Error al obtener Resultados de Aprendizaje' });
       }
 
@@ -94,7 +98,7 @@ router.get('/curso', (req, res) => {
 // 2. ANÁLISIS POR ESTUDIANTE
 // Ejemplo: /api/analisis/estudiante?asignatura=TIS800&anio=2025&semestre=8&estudiante=20268128K
 // =========================================
-router.get('/estudiante', (req, res) => {
+router.get('/estudiante', scopeQueryAsignatura, (req, res) => {
   const { asignatura, anio, semestre, estudiante } = req.query;
 
   if (!asignatura || !anio || !semestre || !estudiante) {
@@ -119,18 +123,13 @@ router.get('/estudiante', (req, res) => {
     ORDER BY RA;
   `;
 
-  console.log('🧩 Ejecutando consulta con parámetros:', params);
-
   connection.query(sql, params, (err, rows) => {
     if (err) {
-      console.error('❌ Error en consulta Estudiante:', err);
+      console.error('❌ Error en consulta Estudiante:', err?.message || err);
       return res.status(500).json({ error: 'Error al obtener datos del estudiante' });
     }
 
-    console.log('📊 Registros devueltos:', rows.length);
-
     if (!rows.length) {
-      console.warn('⚠️ No se encontraron resultados para:', params);
       return res.json([]);
     }
 
@@ -148,7 +147,9 @@ router.get('/estudiante', (req, res) => {
 // 3. ANÁLISIS CON IA A PARTIR DE DATOS DE GRÁFICO
 // POST /api/analisis/ia
 // =========================================
-router.post('/ia', generarAnalisisIA);
+router.post('/ia', iaLimiter,
+  scopeAsignatura((req) => req.body?.context?.asignatura ?? req.body?.asignatura),
+  generarAnalisisIA);
 
 // =========================================
 // 4. OBTENER ANÁLISIS POR ID

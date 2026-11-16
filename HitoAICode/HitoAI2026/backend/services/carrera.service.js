@@ -1,19 +1,36 @@
 const connection = require('../db/connection');
 
-exports.getAll = () => {
+exports.getAll = (scope = null) => {
+  const filtros = [];
+  const params = [];
+  if (scope?.carreraId !== undefined && scope?.carreraId !== null) {
+    filtros.push('c.ID_Carrera = ?');
+    params.push(scope.carreraId);
+  }
+  if (scope?.facultadId !== undefined && scope?.facultadId !== null) {
+    filtros.push('c.facultad_ID_Facultad = ?');
+    params.push(scope.facultadId);
+  }
+  if (scope?.profesorId !== undefined && scope?.profesorId !== null) {
+    filtros.push(`c.ID_Carrera IN (SELECT DISTINCT carrera_ID_Carrera FROM asignatura WHERE usuario_ID_Usuario = ?)`);
+    params.push(scope.profesorId);
+  }
+  const where = filtros.length ? `WHERE ${filtros.join(' AND ')}` : '';
   const sql = `
     SELECT
       c.ID_Carrera,
       c.Nombre,
+      c.facultad_ID_Facultad,
       c.usuario_ID_Usuario,
       u.Nombre AS JefeCarrera,
       f.Nombre AS Facultad
     FROM carrera c
     LEFT JOIN usuario u ON c.usuario_ID_Usuario = u.ID_Usuario
     LEFT JOIN facultad f ON c.facultad_ID_Facultad = f.ID_Facultad
+    ${where}
   `;
   return new Promise((resolve, reject) => {
-    connection.query(sql, (err, results) => {
+    connection.query(sql, params, (err, results) => {
       if (err) return reject(err);
       resolve(results);
     });

@@ -1,20 +1,36 @@
 const connection = require('../db/connection');
 
-exports.obtenerTodas = () => {
+exports.obtenerTodas = (scope = null) => {
+  const filtros = [];
+  const params = [];
+  if (scope?.carreraId !== undefined && scope?.carreraId !== null) {
+    filtros.push('a.carrera_ID_Carrera = ?');
+    params.push(scope.carreraId);
+  }
+  if (scope?.facultadId !== undefined && scope?.facultadId !== null) {
+    filtros.push('c.facultad_ID_Facultad = ?');
+    params.push(scope.facultadId);
+  }
+  if (scope?.profesorId !== undefined && scope?.profesorId !== null) {
+    filtros.push('a.usuario_ID_Usuario = ?');
+    params.push(scope.profesorId);
+  }
+  const whereExtra = filtros.length ? ` AND ${filtros.join(' AND ')}` : '';
   const sql = `
     SELECT
       a.*,
       u.Nombre AS Profesor,
       c.Nombre AS Carrera,
+      c.facultad_ID_Facultad AS Facultad_ID,
       f.Nombre AS Facultad
     FROM asignatura a
     JOIN usuario u ON u.ID_Usuario = a.usuario_ID_Usuario
     JOIN carrera c ON c.ID_Carrera = a.carrera_ID_Carrera
     LEFT JOIN facultad f ON f.ID_Facultad = c.facultad_ID_Facultad
-    WHERE a.Estado = 'Activo'
+    WHERE a.Estado = 'Activo'${whereExtra}
   `;
   return new Promise((resolve, reject) => {
-    connection.query(sql, (err, results) => (err ? reject(err) : resolve(results)));
+    connection.query(sql, params, (err, results) => (err ? reject(err) : resolve(results)));
   });
 };
 
@@ -36,6 +52,16 @@ exports.obtenerPorCarreraDelJefe = (idUsuario) => {
 
 
 
+
+// ID de la carrera cuyo jefe es el usuario indicado
+exports.obtenerCarreraIdPorJefe = (idUsuario) => {
+  const sql = `SELECT ID_Carrera FROM carrera WHERE usuario_ID_Usuario = ? LIMIT 1`;
+  return new Promise((resolve, reject) => {
+    connection.query(sql, [idUsuario], (err, results) =>
+      err ? reject(err) : resolve(results[0]?.ID_Carrera ?? null)
+    );
+  });
+};
 
 exports.obtenerPorProfesor = (rutProfesor) => {
   const sql = `

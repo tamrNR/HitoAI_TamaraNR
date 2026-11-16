@@ -1,28 +1,22 @@
 const express = require('express');
-const cors = require('cors');
 const router = express.Router();
 const controller = require('../controllers/usuario.controller');
+const { verifyAuth, authorizeRoles } = require('../middleware/auth.middleware');
+const { loginLimiter } = require('../middleware/rateLimit.middleware');
 
-router.use(cors({
-  origin: true, // Acepta todos los orígenes en desarrollo
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-  credentials: true
-}));
-
-// Prueba
-router.get('/test', (req, res) => {
+// Prueba (requiere sesión)
+router.get('/test', verifyAuth, (req, res) => {
   res.json({ ok: true, message: 'Ruta /api/usuario/test funcionando' });
 });
 
 // Rutas
-router.post('/crear', controller.crearUsuario);
-router.post('/login', controller.login);
-router.get('/jefes', controller.getJefesCarrera);
-router.get('/profesores', controller.getProfesores);
-router.get('/todos', controller.getTodos);
-router.put('/clave/:id', controller.actualizarClave);
-router.put('/rol/:id', controller.actualizarRol);
-router.delete('/eliminar/:id', controller.eliminar);
+router.post('/login', loginLimiter, controller.login); // público (con rate limit)
+router.post('/crear', verifyAuth, authorizeRoles('Administrador'), controller.crearUsuario);
+router.get('/jefes', verifyAuth, authorizeRoles('Administrador', 'Jefe de Carrera', 'Comité Curricular'), controller.getJefesCarrera);
+router.get('/profesores', verifyAuth, authorizeRoles('Administrador', 'Jefe de Carrera', 'Comité Curricular'), controller.getProfesores);
+router.get('/todos', verifyAuth, authorizeRoles('Administrador'), controller.getTodos);
+router.put('/clave/:id', verifyAuth, controller.actualizarClave); // self o Administrador (validado en controller)
+router.put('/rol/:id', verifyAuth, authorizeRoles('Administrador'), controller.actualizarRol);
+router.delete('/eliminar/:id', verifyAuth, authorizeRoles('Administrador'), controller.eliminar);
 
 module.exports = router;

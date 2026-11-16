@@ -142,7 +142,12 @@ exports.generarReporteAnalitica = async (req, res) => {
       const chartEnriched = { ...chart, computed: metrics };
       const chartPrivado = { ...chartPrivadoBase, computed: metrics };
 
-      const filtrosHash = buildFiltrosHash({ tipoGrafico, context, chart: chartPrivado, promptVersion });
+      const alcance = {
+        rol: req.user?.rol || null,
+        carreraId: req.user?.carreraId ?? null,
+        facultadId: req.user?.facultadId ?? null
+      };
+      const filtrosHash = buildFiltrosHash({ tipoGrafico, context, chart: chartPrivado, promptVersion, alcance });
 
       try {
         const cached = await findByHash(tipoGrafico, filtrosHash);

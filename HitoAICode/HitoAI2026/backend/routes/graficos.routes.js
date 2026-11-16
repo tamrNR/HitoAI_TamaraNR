@@ -7,7 +7,14 @@
 const express = require('express');
 const router = express.Router();
 const connection = require('../db/connection');
+const { verifyAuth, authorizeRoles, scopeAsignatura, scopeDesdeUsuario } = require('../middleware/auth.middleware');
 const ALUMNO_CURSO = '__CURSO__';
+
+const ROLES_ANALITICA = ['Administrador', 'Jefe de Carrera', 'Comité Curricular', 'Decano'];
+const scopeQueryAsignatura = scopeAsignatura((req) => req.query.asignatura || req.query.asignaturaID);
+
+router.use(verifyAuth);
+router.use(authorizeRoles(...ROLES_ANALITICA));
 
 /**
  * ========================================
@@ -118,7 +125,7 @@ function completarConTodasLasCompetencias(datosObtenidos, callback) {
   });
 }
 
-router.get('/radar', (req, res) => {
+router.get('/radar', scopeQueryAsignatura, (req, res) => {
   const { asignatura, alumno, anio, semestre, nivel } = req.query;
 
   console.log('[GraficosRadar] 📡 Parámetros recibidos:', { asignatura, alumno, anio, semestre, nivel });
@@ -360,7 +367,7 @@ router.get('/radar', (req, res) => {
  * 2️⃣ GRÁFICO BARRAS - Alumno vs Promedio
  * ========================================
  */
-router.get('/barras', async (req, res) => {
+router.get('/barras', scopeQueryAsignatura, async (req, res) => {
   const { asignatura, alumno, anio, semestre } = req.query;
 
   if (!asignatura || !alumno || !anio || !semestre) {
@@ -472,7 +479,7 @@ router.get('/barras', async (req, res) => {
  * 3️⃣ GRÁFICO BURBUJAS - Competencias vs Brecha
  * ========================================
  */
-router.get('/burbujas', async (req, res) => {
+router.get('/burbujas', scopeQueryAsignatura, async (req, res) => {
   const { asignatura, alumno, anio, semestre } = req.query;
 
   if (!asignatura || !alumno || !anio || !semestre) {
@@ -569,7 +576,7 @@ router.get('/burbujas', async (req, res) => {
  * 4️⃣ GRÁFICO HEATMAP - Estudiantes vs Competencias
  * ========================================
  */
-router.get('/heatmap', (req, res) => {
+router.get('/heatmap', scopeQueryAsignatura, (req, res) => {
   const { asignatura, anio, semestre } = req.query;
 
   console.log('[GraficosHeatmap] 📡 Parámetros recibidos:', { asignatura, anio, semestre });
@@ -645,7 +652,7 @@ router.get('/heatmap', (req, res) => {
  * Filas siguientes: cada alumno inscrito (activo) en esa asignatura+año+semestre,
  * con su logro individual por competencia.
  */
-router.get('/heatmap-curso', async (req, res) => {
+router.get('/heatmap-curso', scopeQueryAsignatura, async (req, res) => {
   const { asignatura, anio, semestre } = req.query;
 
   console.log('[GraficosHeatmapCurso] 📡 Parámetros recibidos:', { asignatura, anio, semestre });
@@ -796,6 +803,24 @@ router.get('/lineas', (req, res) => {
 
   console.log('[Trayectoria] 📡 Alumno:', alumno);
 
+  // Scope: la trayectoria solo incluye asignaturas del ámbito del usuario
+  const scope = scopeDesdeUsuario(req.user);
+  const scopeFiltros = [];
+  const scopeParams = [];
+  if (scope?.carreraId !== undefined && scope?.carreraId !== null) {
+    scopeFiltros.push('a.carrera_ID_Carrera = ?');
+    scopeParams.push(scope.carreraId);
+  }
+  if (scope?.facultadId !== undefined && scope?.facultadId !== null) {
+    scopeFiltros.push('car.facultad_ID_Facultad = ?');
+    scopeParams.push(scope.facultadId);
+  }
+  if (scope?.profesorId !== undefined && scope?.profesorId !== null) {
+    scopeFiltros.push('a.usuario_ID_Usuario = ?');
+    scopeParams.push(scope.profesorId);
+  }
+  const scopeWhere = scopeFiltros.length ? ` AND ${scopeFiltros.join(' AND ')}` : '';
+
   const sql = `
     SELECT
       insc.asignatura_ID_Asignatura                           AS asignatura,
@@ -808,8 +833,10 @@ router.get('/lineas', (req, res) => {
     JOIN indicador      ind  ON ind.ID_Indicador        = ap.indicador_ID_Indicador
     JOIN ra_competencia rc   ON rc.ra_ID_RA             = ind.ra_ID_RA
     JOIN competencia    c    ON c.ID_Competencia        = rc.competencia_ID_Competencia
+    JOIN asignatura     a    ON a.ID_Asignatura         = insc.asignatura_ID_Asignatura
+    JOIN carrera        car  ON car.ID_Carrera          = a.carrera_ID_Carrera
     WHERE insc.estudiante_ID_Estudiante = ?
-      AND ind.Puntaje_Max > 0
+      AND ind.Puntaje_Max > 0${scopeWhere}
     GROUP BY
       insc.asignatura_ID_Asignatura,
       insc.Semestre,
@@ -818,7 +845,7 @@ router.get('/lineas', (req, res) => {
     ORDER BY insc.Semestre, c.ID_Competencia
   `;
 
-  connection.query(sql, [alumno], (err, rows) => {
+  connection.query(sql, [alumno, ...scopeParams], (err, rows) => {
     if (err) {
       console.error('[Trayectoria] ❌ Error:', err);
       return res.status(500).json({ error: 'Error interno del servidor' });
@@ -840,7 +867,7 @@ router.get('/lineas', (req, res) => {
  * Satisfactorio (75-100%). En modo alumno, la población son sus notas
  * individuales; en modo curso, la población son los alumnos inscritos.
  */
-router.get('/distribucion-tramos', async (req, res) => {
+router.get('/distribucion-tramos', scopeQueryAsignatura, async (req, res) => {
   const { asignatura, alumno, anio, semestre } = req.query;
 
   if (!asignatura || !anio || !semestre) {
@@ -911,7 +938,7 @@ router.get('/distribucion-tramos', async (req, res) => {
 /**
  * GRÁFICO DE LÍNEAS - Evolución por Evaluación (dentro de una asignatura)
  */
-router.get('/evolucion-evaluacion', (req, res) => {
+router.get('/evolucion-evaluacion', scopeQueryAsignatura, (req, res) => {
   const { asignatura, alumno, anio, semestre } = req.query;
 
   if (!asignatura || !alumno || !anio || !semestre) {
@@ -1022,4 +1049,4 @@ router.get('/test', (req, res) => {
 });
 
 
-module.exports = router;
+

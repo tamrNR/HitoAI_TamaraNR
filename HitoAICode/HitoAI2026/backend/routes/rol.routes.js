@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/rol.controller');
+const { verifyAuth } = require('../middleware/auth.middleware');
 
-// Ruta para obtener todos los roles
-router.get('/', controller.getAllRoles);
+// Catálogo de roles: cualquier usuario autenticado puede consultarlo
+router.get('/', verifyAuth, controller.getAllRoles);
 
 module.exports = router;

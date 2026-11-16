@@ -27,6 +27,11 @@ exports.crearUsuario = async (req, res) => {
   }
 
   try {
+    const nombreRol = await UsuarioService.obtenerNombreRol(Rol_ID_Rol);
+    if (normalize(nombreRol || '') === 'decano' && facultadId === null) {
+      return res.status(400).json({ message: 'Facultad_ID_Facultad es obligatoria para el rol Decano' });
+    }
+
     const existe = await UsuarioService.existe(rut);
     if (existe) {
       return res.status(400).json({ message: 'Usuario ya registrado' });
@@ -165,6 +170,10 @@ exports.actualizarRol = async (req, res) => {
     }
   }
   try {
+    const nombreRol = await UsuarioService.obtenerNombreRol(rolId);
+    if (normalize(nombreRol || '') === 'decano' && facultad === undefined) {
+      return res.status(400).json({ message: 'Facultad_ID_Facultad es obligatoria para el rol Decano' });
+    }
     await UsuarioService.actualizarRol(id, rolId, facultad);
     res.json({ message: 'Rol actualizado' });
   } catch (error) {

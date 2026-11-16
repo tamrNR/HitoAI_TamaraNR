@@ -81,6 +81,17 @@ exports.getProfesores = () => {
   });
 };
 
+// Obtener el nombre de un rol por su ID (para validaciones de ámbito)
+exports.obtenerNombreRol = (rolId) => {
+  const sql = `SELECT Nombre FROM rol WHERE ID_Rol = ? LIMIT 1`;
+  return new Promise((resolve, reject) => {
+    connection.query(sql, [rolId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results[0]?.Nombre ?? null);
+    });
+  });
+};
+
 // Obtener todos los usuarios con su rol
 exports.getTodos = () => {
   const sql = `

@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node app.js",
-    "test": "node utils/__tests__/resumenCompetencias.test.js"
+    "test": "node utils/__tests__/run-all.js"
   },
   "keywords": [],
   "author": "",

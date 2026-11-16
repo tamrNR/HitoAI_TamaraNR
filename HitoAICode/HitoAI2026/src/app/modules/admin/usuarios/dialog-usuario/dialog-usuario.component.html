@@ -37,6 +37,14 @@
       </select>
       <small class="text-muted">Obligatorio para el rol Decano: define el ámbito de sus análisis.</small>
     </div>
+    <div class="mb-3" *ngIf="rolSeleccionadoEsComite">
+      <label class="form-label">Carrera <span class="text-danger">*</span></label>
+      <select class="form-select" [(ngModel)]="usuario.Carrera_ID_Carrera" name="carrera" [disabled]="bloqueado" required>
+        <option [ngValue]="null" disabled selected>Selecciona una carrera</option>
+        <option *ngFor="let c of carreras" [ngValue]="c.ID_Carrera">{{ c.Nombre }}</option>
+      </select>
+      <small class="text-muted">Obligatorio para el rol Comité Curricular: define el ámbito de sus análisis.</small>
+    </div>
     <div class="mb-3">
       <label class="form-label">Clave</label>
       <div class="input-group">
@@ -75,6 +83,14 @@
         <option *ngFor="let f of facultades" [ngValue]="f.ID_Facultad">{{ f.Nombre }}</option>
       </select>
       <small class="text-muted">Obligatorio para el rol Decano: define el ámbito de sus análisis.</small>
+    </div>
+    <div *ngIf="modo === 'rol' && rolSeleccionadoEsComite" class="mb-3">
+      <label class="form-label">Carrera <span class="text-danger">*</span></label>
+      <select class="form-select" [(ngModel)]="usuario.Carrera_ID_Carrera">
+        <option [ngValue]="null" disabled selected>Selecciona una carrera</option>
+        <option *ngFor="let c of carreras" [ngValue]="c.ID_Carrera">{{ c.Nombre }}</option>
+      </select>
+      <small class="text-muted">Obligatorio para el rol Comité Curricular: define el ámbito de sus análisis.</small>
     </div>
 
     <div *ngIf="modo === 'editar'">

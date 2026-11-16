@@ -43,8 +43,19 @@
     </div>
 
     <div class="mb-3">
-      <label class="form-label">Facultad</label>
-      <input type="text" class="form-control" value="FAIN" disabled />
+      <label class="form-label">Facultad <span class="text-danger">*</span></label>
+      <select
+        class="form-select"
+        [(ngModel)]="carrera.facultad_ID_Facultad"
+        name="facultad"
+        [disabled]="bloqueado"
+        required
+      >
+        <option [ngValue]="0" disabled>Seleccione una facultad</option>
+        <option *ngFor="let f of facultades" [ngValue]="f.ID_Facultad">
+          {{ f.Nombre }}
+        </option>
+      </select>
     </div>
   </form>
 
@@ -52,7 +63,7 @@
   <div *ngIf="modo === 'ver'">
     <p><strong>Nombre:</strong> {{ carrera.Nombre }}</p>
     <p><strong>Jefe de Carrera:</strong> {{ nombreJefe }}</p>
-    <p><strong>Facultad:</strong> FAIN</p>
+    <p><strong>Facultad:</strong> {{ nombreFacultad }}</p>
 
     <hr />
 

@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CarreraService } from '../../../../services/carrera.service';
+import { FacultadService } from '../../../../services/facultad.service';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -20,8 +21,10 @@ export class DialogCarreraComponent {
   carrera: Carrera = {
     Nombre: '',
     usuario_ID_Usuario: '',
-    facultad_ID_Facultad: 1
+    facultad_ID_Facultad: 0
   };
+
+  facultades: { ID_Facultad: number; Nombre: string }[] = [];
 
   bloqueado = false;
   mensajeExito = '';
@@ -31,14 +34,22 @@ export class DialogCarreraComponent {
   accionConfirmada: 'crear' | 'actualizar' | 'eliminar' | null = null;
   private modalCerrado = false;
 
-  constructor(public modal: NgbActiveModal, private carreraService: CarreraService) {}
+  constructor(
+    public modal: NgbActiveModal,
+    private carreraService: CarreraService,
+    private facultadService: FacultadService
+  ) {}
 
   ngOnInit(): void {
+    this.facultadService.getAll().subscribe({
+      next: data => (this.facultades = data || []),
+      error: () => (this.mensajeError = 'Error al cargar facultades')
+    });
     if (this.datos) {
       this.carrera = {
         Nombre: this.datos.Nombre,
         usuario_ID_Usuario: this.datos.usuario_ID_Usuario || '',
-        facultad_ID_Facultad: 1
+        facultad_ID_Facultad: this.datos.facultad_ID_Facultad ?? 0
       };
 
       if (this.modo === 'ver' && this.datos?.ID_Carrera) {
@@ -61,12 +72,22 @@ export class DialogCarreraComponent {
     return jefe ? jefe.Nombre : 'No asignado';
   }
 
-  crearCarrera() {
-    if (!this.carrera.Nombre || !this.carrera.usuario_ID_Usuario) {
+  get nombreFacultad(): string {
+    const f = this.facultades.find(x => Number(x.ID_Facultad) === Number(this.carrera.facultad_ID_Facultad));
+    return f?.Nombre || this.datos?.Facultad || 'No asignada';
+  }
+
+  private camposValidos(): boolean {
+    if (!this.carrera.Nombre || !this.carrera.usuario_ID_Usuario || !this.carrera.facultad_ID_Facultad) {
       this.mensajeError = 'Debe completar todos los campos antes de continuar.';
       setTimeout(() => this.mensajeError = '', 3000);
-      return;
+      return false;
     }
+    return true;
+  }
+
+  crearCarrera() {
+    if (!this.camposValidos()) return;
 
     if (!this.accionConfirmada) {
       this.accionConfirmada = 'crear';
@@ -81,11 +102,7 @@ export class DialogCarreraComponent {
   }
 
   actualizarCarrera() {
-    if (!this.carrera.Nombre || !this.carrera.usuario_ID_Usuario) {
-      this.mensajeError = 'Debe completar todos los campos antes de continuar.';
-      setTimeout(() => this.mensajeError = '', 3000);
-      return;
-    }
+    if (!this.camposValidos()) return;
 
     if (!this.accionConfirmada) {
       this.accionConfirmada = 'actualizar';

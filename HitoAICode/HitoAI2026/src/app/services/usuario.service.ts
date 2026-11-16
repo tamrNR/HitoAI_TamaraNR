@@ -35,8 +35,8 @@ export class UsuarioService {
     return this.http.put(`${this.apiUrl}/clave/${id}`, { clave });
   }
 
-  actualizarRol(id: string, rolId: string, facultadId?: number | string | null) {
-    return this.http.put(`${this.apiUrl}/rol/${id}`, { rolId, facultadId });
+  actualizarRol(id: string, rolId: string, facultadId?: number | string | null, carreraId?: number | string | null) {
+    return this.http.put(`${this.apiUrl}/rol/${id}`, { rolId, facultadId, carreraId });
   }
 
   eliminar(id: string) {

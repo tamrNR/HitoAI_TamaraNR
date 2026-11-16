@@ -5,6 +5,7 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { UsuarioService } from '../../../../services/usuario.service';
 import { RolService } from '../../../../services/rol.service';
 import { FacultadService } from '../../../../services/facultad.service';
+import { CarreraService } from '../../../../services/carrera.service';
 import { Usuario, Rol } from '../../../../models';
 import { cleanRut, validarRut } from '../../../../utils/rut';
 import { RutFormatPipe } from '../../../../pipes/rut-format.pipe';
@@ -37,12 +38,14 @@ export class DialogUsuarioComponent {
   private modalCerrado = false;
 
   facultades: { ID_Facultad: number; Nombre: string }[] = [];
+  carreras: { ID_Carrera?: string | number; Nombre: string }[] = [];
 
   constructor(
     public modal: NgbActiveModal,
     private usuarioService: UsuarioService,
     private rolService: RolService,
-    private facultadService: FacultadService
+    private facultadService: FacultadService,
+    private carreraService: CarreraService
   ) {}
 
   private normalizar(s: string): string {
@@ -54,6 +57,11 @@ export class DialogUsuarioComponent {
     return this.normalizar(rol?.Nombre || '') === 'decano';
   }
 
+  get rolSeleccionadoEsComite(): boolean {
+    const rol = this.roles.find(r => String(r.ID_Rol) === String(this.usuario.Rol_ID_Rol));
+    return this.normalizar(rol?.Nombre || '') === 'comite curricular';
+  }
+
   ngOnInit(): void {
     if (this.modo === 'crear' || this.modo === 'rol') {
       this.rolService.getRoles().subscribe({
@@ -63,6 +71,10 @@ export class DialogUsuarioComponent {
       this.facultadService.getAll().subscribe({
         next: data => (this.facultades = data || []),
         error: () => (this.mensajeError = 'Error al cargar facultades')
+      });
+      this.carreraService.getCarreras().subscribe({
+        next: data => (this.carreras = data || []),
+        error: () => (this.mensajeError = 'Error al cargar carreras')
       });
     }
     if (this.datos) {
@@ -133,6 +145,12 @@ export class DialogUsuarioComponent {
       return;
     }
 
+    if (this.rolSeleccionadoEsComite && (this.usuario.Carrera_ID_Carrera === undefined || this.usuario.Carrera_ID_Carrera === null || this.usuario.Carrera_ID_Carrera === '')) {
+      this.mensajeError = 'Debe seleccionar una carrera para el rol Comité Curricular.';
+      setTimeout(() => (this.mensajeError = ''), 3000);
+      return;
+    }
+
     this.usuario.ID_Usuario = cleanRut(this.usuario.ID_Usuario);
 
     if (!this.accionConfirmada) {
@@ -168,6 +186,12 @@ export class DialogUsuarioComponent {
       return;
     }
 
+    if (this.rolSeleccionadoEsComite && (this.usuario.Carrera_ID_Carrera === undefined || this.usuario.Carrera_ID_Carrera === null || this.usuario.Carrera_ID_Carrera === '')) {
+      this.mensajeError = 'Debe seleccionar una carrera para el rol Comité Curricular.';
+      setTimeout(() => (this.mensajeError = ''), 3000);
+      return;
+    }
+
     if (!this.accionConfirmada) {
       this.accionConfirmada = 'rol';
       return;
@@ -176,7 +200,12 @@ export class DialogUsuarioComponent {
     if (this.bloqueado) return;
     this.bloqueado = true;
     this.usuarioService
-      .actualizarRol(this.usuario.ID_Usuario, String(this.usuario.Rol_ID_Rol), this.usuario.Facultad_ID_Facultad ?? null)
+      .actualizarRol(
+        this.usuario.ID_Usuario,
+        String(this.usuario.Rol_ID_Rol),
+        this.usuario.Facultad_ID_Facultad ?? null,
+        this.usuario.Carrera_ID_Carrera ?? null
+      )
       .subscribe(() => {
         this.mensajeExito = 'Rol actualizado';
         setTimeout(() => this.cerrarConExito(), 1500);

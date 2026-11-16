@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/inscripcion.controller');
 const connection = require('../db/connection');
-const { verifyAuth, authorizeRoles, scopeAsignatura } = require('../middleware/auth.middleware');
+const { verifyAuth, authorizeRoles, scopeAsignatura, obtenerScopeAsignatura, usuarioPuedeVerAsignatura } = require('../middleware/auth.middleware');
 
 const ROLES_LECTURA = ['Administrador', 'Profesor', 'Jefe de Carrera', 'Comité Curricular'];
 const ROLES_ESCRITURA = ['Administrador', 'Jefe de Carrera'];
@@ -21,7 +21,6 @@ router.post('/crear-masivo', authorizeRoles(...ROLES_ESCRITURA), async (req, res
     return res.status(400).json({ message: 'Inscripciones sin asignatura' });
   }
   try {
-    const { obtenerScopeAsignatura, usuarioPuedeVerAsignatura } = require('../middleware/auth.middleware');
     for (const id of asignaturas) {
       const asignatura = await obtenerScopeAsignatura(id);
       if (!asignatura || !usuarioPuedeVerAsignatura(req.user, asignatura)) {

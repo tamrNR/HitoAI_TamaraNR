@@ -153,12 +153,19 @@ exports.actualizarClave = async (req, res) => {
 // Actualizar rol
 exports.actualizarRol = async (req, res) => {
   const { id } = req.params;
-  const { rolId } = req.body;
+  const { rolId, facultadId } = req.body;
   if (!rolId) {
     return res.status(400).json({ message: 'Rol requerido' });
   }
+  let facultad = undefined;
+  if (facultadId !== undefined && facultadId !== null && facultadId !== '') {
+    facultad = parseInt(facultadId, 10);
+    if (Number.isNaN(facultad) || facultad <= 0) {
+      return res.status(400).json({ message: 'Facultad_ID_Facultad inválida' });
+    }
+  }
   try {
-    await UsuarioService.actualizarRol(id, rolId);
+    await UsuarioService.actualizarRol(id, rolId, facultad);
     res.json({ message: 'Rol actualizado' });
   } catch (error) {
     console.error(error);

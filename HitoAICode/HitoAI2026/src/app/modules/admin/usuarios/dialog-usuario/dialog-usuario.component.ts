@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { UsuarioService } from '../../../../services/usuario.service';
 import { RolService } from '../../../../services/rol.service';
+import { FacultadService } from '../../../../services/facultad.service';
 import { Usuario, Rol } from '../../../../models';
 import { cleanRut, validarRut } from '../../../../utils/rut';
 import { RutFormatPipe } from '../../../../pipes/rut-format.pipe';
@@ -35,17 +36,33 @@ export class DialogUsuarioComponent {
   accionConfirmada: 'crear' | 'actualizar' | 'rol' | 'eliminar' | null = null;
   private modalCerrado = false;
 
+  facultades: { ID_Facultad: number; Nombre: string }[] = [];
+
   constructor(
     public modal: NgbActiveModal,
     private usuarioService: UsuarioService,
-    private rolService: RolService
+    private rolService: RolService,
+    private facultadService: FacultadService
   ) {}
+
+  private normalizar(s: string): string {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  get rolSeleccionadoEsDecano(): boolean {
+    const rol = this.roles.find(r => String(r.ID_Rol) === String(this.usuario.Rol_ID_Rol));
+    return this.normalizar(rol?.Nombre || '') === 'decano';
+  }
 
   ngOnInit(): void {
     if (this.modo === 'crear' || this.modo === 'rol') {
       this.rolService.getRoles().subscribe({
         next: data => (this.roles = data),
         error: () => (this.mensajeError = 'Error al cargar roles')
+      });
+      this.facultadService.getAll().subscribe({
+        next: data => (this.facultades = data || []),
+        error: () => (this.mensajeError = 'Error al cargar facultades')
       });
     }
     if (this.datos) {
@@ -110,6 +127,12 @@ export class DialogUsuarioComponent {
       return;
     }
 
+    if (this.rolSeleccionadoEsDecano && (this.usuario.Facultad_ID_Facultad === undefined || this.usuario.Facultad_ID_Facultad === null || this.usuario.Facultad_ID_Facultad === '')) {
+      this.mensajeError = 'Debe seleccionar una facultad para el rol Decano.';
+      setTimeout(() => (this.mensajeError = ''), 3000);
+      return;
+    }
+
     this.usuario.ID_Usuario = cleanRut(this.usuario.ID_Usuario);
 
     if (!this.accionConfirmada) {
@@ -139,6 +162,12 @@ export class DialogUsuarioComponent {
       return;
     }
 
+    if (this.rolSeleccionadoEsDecano && (this.usuario.Facultad_ID_Facultad === undefined || this.usuario.Facultad_ID_Facultad === null || this.usuario.Facultad_ID_Facultad === '')) {
+      this.mensajeError = 'Debe seleccionar una facultad para el rol Decano.';
+      setTimeout(() => (this.mensajeError = ''), 3000);
+      return;
+    }
+
     if (!this.accionConfirmada) {
       this.accionConfirmada = 'rol';
       return;
@@ -147,7 +176,7 @@ export class DialogUsuarioComponent {
     if (this.bloqueado) return;
     this.bloqueado = true;
     this.usuarioService
-      .actualizarRol(this.usuario.ID_Usuario, this.usuario.Rol_ID_Rol)
+      .actualizarRol(this.usuario.ID_Usuario, String(this.usuario.Rol_ID_Rol), this.usuario.Facultad_ID_Facultad ?? null)
       .subscribe(() => {
         this.mensajeExito = 'Rol actualizado';
         setTimeout(() => this.cerrarConExito(), 1500);

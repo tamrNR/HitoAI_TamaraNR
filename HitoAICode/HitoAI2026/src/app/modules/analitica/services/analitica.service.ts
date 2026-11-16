@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse, HttpParams, HttpHeaders } from '@angular
 import { Observable, of, throwError } from 'rxjs';
 import { BehaviorSubject } from 'rxjs';
 import { catchError, retry, tap, map } from 'rxjs/operators';
+import { environment } from '../../../../environments/environment';
 
 interface FiltrosAnalitica {
   carrera?: any;
@@ -37,7 +38,7 @@ export class AnaliticaService {
 
   private datosGraficos: DatosGraficos = {};
   private ultimaUrlAnalitica: string | null = null;
-  private baseUrl = 'http://localhost:8080/api';
+  private baseUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 

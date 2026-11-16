@@ -29,6 +29,14 @@
         <option *ngFor="let r of roles" [value]="r.ID_Rol">{{ r.Nombre }}</option>
       </select>
     </div>
+    <div class="mb-3" *ngIf="rolSeleccionadoEsDecano">
+      <label class="form-label">Facultad <span class="text-danger">*</span></label>
+      <select class="form-select" [(ngModel)]="usuario.Facultad_ID_Facultad" name="facultad" [disabled]="bloqueado" required>
+        <option [ngValue]="null" disabled selected>Selecciona una facultad</option>
+        <option *ngFor="let f of facultades" [ngValue]="f.ID_Facultad">{{ f.Nombre }}</option>
+      </select>
+      <small class="text-muted">Obligatorio para el rol Decano: define el ámbito de sus análisis.</small>
+    </div>
     <div class="mb-3 position-relative">
       <label class="form-label">Clave</label>
       <input [type]="mostrarClave ? 'text' : 'password'" class="form-control" [(ngModel)]="usuario.Clave" name="clave" [disabled]="bloqueado" required />
@@ -59,6 +67,14 @@
         <option value="" disabled selected>Selecciona un rol</option>
         <option *ngFor="let r of roles" [value]="r.ID_Rol">{{ r.Nombre }}</option>
       </select>
+    </div>
+    <div *ngIf="modo === 'rol' && rolSeleccionadoEsDecano" class="mb-3">
+      <label class="form-label">Facultad <span class="text-danger">*</span></label>
+      <select class="form-select" [(ngModel)]="usuario.Facultad_ID_Facultad">
+        <option [ngValue]="null" disabled selected>Selecciona una facultad</option>
+        <option *ngFor="let f of facultades" [ngValue]="f.ID_Facultad">{{ f.Nombre }}</option>
+      </select>
+      <small class="text-muted">Obligatorio para el rol Decano: define el ámbito de sus análisis.</small>
     </div>
 
     <div *ngIf="modo === 'editar'">

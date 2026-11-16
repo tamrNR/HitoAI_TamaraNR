@@ -4,4 +4,5 @@ export interface Usuario {
   Clave?: string;
   Rol_ID_Rol?: string;
   Rol?: string;
+  Facultad_ID_Facultad?: number | string;
 }

@@ -109,11 +109,15 @@ exports.actualizarClave = async (id, nuevaClave) => {
   });
 };
 
-// Actualizar el rol de un usuario
-exports.actualizarRol = (id, rolId) => {
-  const sql = `UPDATE usuario SET Rol_ID_Rol = ? WHERE ID_Usuario = ?`;
+// Actualizar el rol de un usuario (y facultad si se indica, p.ej. rol Decano)
+exports.actualizarRol = (id, rolId, facultadId) => {
+  const tieneFacultad = facultadId !== undefined;
+  const sql = tieneFacultad
+    ? `UPDATE usuario SET Rol_ID_Rol = ?, Facultad_ID_Facultad = ? WHERE ID_Usuario = ?`
+    : `UPDATE usuario SET Rol_ID_Rol = ? WHERE ID_Usuario = ?`;
+  const params = tieneFacultad ? [rolId, facultadId, id] : [rolId, id];
   return new Promise((resolve, reject) => {
-    connection.query(sql, [rolId, id], (err, results) => {
+    connection.query(sql, params, (err, results) => {
       if (err) return reject(err);
       resolve(results);
     });

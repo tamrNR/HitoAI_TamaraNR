@@ -7,7 +7,7 @@ import { Rol } from '../models/rol.model';
   providedIn: 'root'
 })
 export class RolService {
-  private apiUrl = `${environment.apiUrl}/api/rol`;
+  private apiUrl = `${environment.apiUrl}/rol`;
 
   constructor(private http: HttpClient) {}
 

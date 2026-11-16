@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 
 // Crear nuevo usuario
 exports.crearUsuario = async (req, res) => {
-  const { ID_Usuario, Nombre, Clave, Rol_ID_Rol, Facultad_ID_Facultad } = req.body;
+  const { ID_Usuario, Nombre, Clave, Rol_ID_Rol, Facultad_ID_Facultad, Carrera_ID_Carrera } = req.body;
   const rut = ID_Usuario.replace(/\./g, '').replace(/-/g, '').toUpperCase();
 
   if (!ID_Usuario || !Nombre || !Clave || !Rol_ID_Rol) {
@@ -19,17 +19,33 @@ exports.crearUsuario = async (req, res) => {
   });
   if (err) return res.status(400).json({ message: err });
 
-  const facultadId = Facultad_ID_Facultad !== undefined && Facultad_ID_Facultad !== null && Facultad_ID_Facultad !== ''
-    ? parseInt(Facultad_ID_Facultad, 10)
-    : null;
-  if (facultadId !== null && (Number.isNaN(facultadId) || facultadId <= 0)) {
-    return res.status(400).json({ message: 'Facultad_ID_Facultad inválida' });
-  }
+  const aEntero = (v) => {
+    if (v === undefined || v === null || v === '') return null;
+    const n = parseInt(v, 10);
+    return Number.isNaN(n) || n <= 0 ? 'invalido' : n;
+  };
+  const facultadRaw = aEntero(Facultad_ID_Facultad);
+  const carreraRaw = aEntero(Carrera_ID_Carrera);
+  if (facultadRaw === 'invalido') return res.status(400).json({ message: 'Facultad_ID_Facultad inválida' });
+  if (carreraRaw === 'invalido') return res.status(400).json({ message: 'Carrera_ID_Carrera inválida' });
 
   try {
     const nombreRol = await UsuarioService.obtenerNombreRol(Rol_ID_Rol);
-    if (normalize(nombreRol || '') === 'decano' && facultadId === null) {
+    const rolNorm = normalize(nombreRol || '');
+    // Ámbitos por rol: Decano -> facultad obligatoria; Comité -> carrera obligatoria; el resto se limpia
+    const facultadId = rolNorm === 'decano' ? facultadRaw : null;
+    const carreraId = rolNorm === 'comite curricular' ? carreraRaw : null;
+    if (rolNorm === 'decano' && facultadId === null) {
       return res.status(400).json({ message: 'Facultad_ID_Facultad es obligatoria para el rol Decano' });
+    }
+    if (rolNorm === 'comite curricular') {
+      if (carreraId === null) {
+        return res.status(400).json({ message: 'Carrera_ID_Carrera es obligatoria para el rol Comité Curricular' });
+      }
+      const existeCarrera = await UsuarioService.existeCarrera(carreraId);
+      if (!existeCarrera) {
+        return res.status(400).json({ message: 'La carrera indicada no existe' });
+      }
     }
 
     const existe = await UsuarioService.existe(rut);
@@ -37,7 +53,7 @@ exports.crearUsuario = async (req, res) => {
       return res.status(400).json({ message: 'Usuario ya registrado' });
     }
 
-    await UsuarioService.crearUsuario(rut, Nombre, Clave, Rol_ID_Rol, facultadId);
+    await UsuarioService.crearUsuario(rut, Nombre, Clave, Rol_ID_Rol, facultadId, carreraId);
     res.status(201).json({ message: 'Usuario creado correctamente' });
   } catch (error) {
     console.error(error);
@@ -158,23 +174,42 @@ exports.actualizarClave = async (req, res) => {
 // Actualizar rol
 exports.actualizarRol = async (req, res) => {
   const { id } = req.params;
-  const { rolId, facultadId } = req.body;
+  const { rolId, facultadId: facultadIdBody, carreraId: carreraIdBody } = req.body;
   if (!rolId) {
     return res.status(400).json({ message: 'Rol requerido' });
   }
-  let facultad = undefined;
-  if (facultadId !== undefined && facultadId !== null && facultadId !== '') {
-    facultad = parseInt(facultadId, 10);
-    if (Number.isNaN(facultad) || facultad <= 0) {
-      return res.status(400).json({ message: 'Facultad_ID_Facultad inválida' });
-    }
+  const aEntero = (v) => {
+    if (v === undefined || v === null || v === '') return null;
+    const n = parseInt(v, 10);
+    return Number.isNaN(n) || n <= 0 ? 'invalido' : n;
+  };
+  const facultadRaw = aEntero(facultadIdBody);
+  const carreraRaw = aEntero(carreraIdBody);
+  if (facultadRaw === 'invalido') {
+    return res.status(400).json({ message: 'Facultad_ID_Facultad inválida' });
+  }
+  if (carreraRaw === 'invalido') {
+    return res.status(400).json({ message: 'Carrera_ID_Carrera inválida' });
   }
   try {
     const nombreRol = await UsuarioService.obtenerNombreRol(rolId);
-    if (normalize(nombreRol || '') === 'decano' && facultad === undefined) {
+    const rolNorm = normalize(nombreRol || '');
+    // Ámbitos por rol: Decano -> facultad obligatoria; Comité -> carrera obligatoria; el resto se limpia
+    const facultad = rolNorm === 'decano' ? facultadRaw : null;
+    const carrera = rolNorm === 'comite curricular' ? carreraRaw : null;
+    if (rolNorm === 'decano' && facultad === null) {
       return res.status(400).json({ message: 'Facultad_ID_Facultad es obligatoria para el rol Decano' });
     }
-    await UsuarioService.actualizarRol(id, rolId, facultad);
+    if (rolNorm === 'comite curricular') {
+      if (carrera === null) {
+        return res.status(400).json({ message: 'Carrera_ID_Carrera es obligatoria para el rol Comité Curricular' });
+      }
+      const existeCarrera = await UsuarioService.existeCarrera(carrera);
+      if (!existeCarrera) {
+        return res.status(400).json({ message: 'La carrera indicada no existe' });
+      }
+    }
+    await UsuarioService.actualizarRol(id, rolId, facultad, carrera);
     res.json({ message: 'Rol actualizado' });
   } catch (error) {
     console.error(error);

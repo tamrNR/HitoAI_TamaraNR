@@ -7,3 +7,11 @@ exports.getAll = () => {
     );
   });
 };
+
+exports.existeFacultad = (id) => {
+  return new Promise((resolve, reject) => {
+    connection.query('SELECT 1 FROM facultad WHERE ID_Facultad = ? LIMIT 1', [id], (err, results) =>
+      err ? reject(err) : resolve(results.length > 0)
+    );
+  });
+};

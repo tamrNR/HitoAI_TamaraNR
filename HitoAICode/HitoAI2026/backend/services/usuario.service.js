@@ -2,14 +2,15 @@ const connection = require('../db/connection');
 const bcrypt = require('bcryptjs');
 
 // Crear nuevo usuario
-exports.crearUsuario = async (ID_Usuario, Nombre, Clave, Rol_ID_Rol, Facultad_ID_Facultad = null) => {
+exports.crearUsuario = async (ID_Usuario, Nombre, Clave, Rol_ID_Rol, Facultad_ID_Facultad = null, Carrera_ID_Carrera = null) => {
   const hashedClave = await bcrypt.hash(Clave, 10);
   const tieneFacultad = Facultad_ID_Facultad !== null && Facultad_ID_Facultad !== undefined && Facultad_ID_Facultad !== '';
-  const sql = tieneFacultad
-    ? `INSERT INTO usuario (ID_Usuario, Nombre, Clave, Rol_ID_Rol, Facultad_ID_Facultad) VALUES (?, ?, ?, ?, ?)`
+  const tieneCarrera = Carrera_ID_Carrera !== null && Carrera_ID_Carrera !== undefined && Carrera_ID_Carrera !== '';
+  const sql = (tieneFacultad || tieneCarrera)
+    ? `INSERT INTO usuario (ID_Usuario, Nombre, Clave, Rol_ID_Rol, Facultad_ID_Facultad, Carrera_ID_Carrera) VALUES (?, ?, ?, ?, ?, ?)`
     : `INSERT INTO usuario (ID_Usuario, Nombre, Clave, Rol_ID_Rol) VALUES (?, ?, ?, ?)`;
-  const params = tieneFacultad
-    ? [ID_Usuario, Nombre, hashedClave, Rol_ID_Rol, Facultad_ID_Facultad]
+  const params = (tieneFacultad || tieneCarrera)
+    ? [ID_Usuario, Nombre, hashedClave, Rol_ID_Rol, tieneFacultad ? Facultad_ID_Facultad : null, tieneCarrera ? Carrera_ID_Carrera : null]
     : [ID_Usuario, Nombre, hashedClave, Rol_ID_Rol];
   return new Promise((resolve, reject) => {
     connection.query(sql, params, (err, results) => {
@@ -22,9 +23,12 @@ exports.crearUsuario = async (ID_Usuario, Nombre, Clave, Rol_ID_Rol, Facultad_ID
 // Validar login y retornar detalle de errores
 exports.validarLogin = (rut, clave) => {
   const sql = `
-    SELECT u.ID_Usuario, u.Nombre, u.Clave, u.Facultad_ID_Facultad, r.Nombre AS Rol,
-           (SELECT c.ID_Carrera FROM carrera c
-            WHERE c.usuario_ID_Usuario = u.ID_Usuario LIMIT 1) AS Carrera_ID
+    SELECT u.ID_Usuario, u.Nombre, u.Clave, u.Facultad_ID_Facultad, u.Carrera_ID_Carrera, r.Nombre AS Rol,
+           COALESCE(
+             (SELECT c.ID_Carrera FROM carrera c
+              WHERE c.usuario_ID_Usuario = u.ID_Usuario LIMIT 1),
+             u.Carrera_ID_Carrera
+           ) AS Carrera_ID
     FROM usuario u
     JOIN rol r ON u.Rol_ID_Rol = r.ID_Rol
     WHERE u.ID_Usuario = ?
@@ -120,13 +124,30 @@ exports.actualizarClave = async (id, nuevaClave) => {
   });
 };
 
-// Actualizar el rol de un usuario (y facultad si se indica, p.ej. rol Decano)
-exports.actualizarRol = (id, rolId, facultadId) => {
-  const tieneFacultad = facultadId !== undefined;
-  const sql = tieneFacultad
-    ? `UPDATE usuario SET Rol_ID_Rol = ?, Facultad_ID_Facultad = ? WHERE ID_Usuario = ?`
-    : `UPDATE usuario SET Rol_ID_Rol = ? WHERE ID_Usuario = ?`;
-  const params = tieneFacultad ? [rolId, facultadId, id] : [rolId, id];
+// Verificar que una carrera exista (para asignarla a un Comité)
+exports.existeCarrera = (carreraId) => {
+  return new Promise((resolve, reject) => {
+    connection.query(`SELECT 1 FROM carrera WHERE ID_Carrera = ? LIMIT 1`, [carreraId], (err, results) => {
+      if (err) return reject(err);
+      resolve(results.length > 0);
+    });
+  });
+};
+
+// Actualizar el rol de un usuario (y facultad/carrera si se indican, p.ej. Decano/Comité)
+exports.actualizarRol = (id, rolId, facultadId, carreraId) => {
+  const sets = ['Rol_ID_Rol = ?'];
+  const params = [rolId];
+  if (facultadId !== undefined) {
+    sets.push('Facultad_ID_Facultad = ?');
+    params.push(facultadId);
+  }
+  if (carreraId !== undefined) {
+    sets.push('Carrera_ID_Carrera = ?');
+    params.push(carreraId);
+  }
+  const sql = `UPDATE usuario SET ${sets.join(', ')} WHERE ID_Usuario = ?`;
+  params.push(id);
   return new Promise((resolve, reject) => {
     connection.query(sql, params, (err, results) => {
       if (err) return reject(err);

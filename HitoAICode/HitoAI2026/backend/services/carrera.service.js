@@ -46,10 +46,10 @@ exports.crear = ({ Nombre, facultad_ID_Facultad, usuario_ID_Usuario }) => {
   });
 };
 
-exports.actualizar = (id, { Nombre, usuario_ID_Usuario }) => {
-  const sql = `UPDATE carrera SET Nombre = ?, usuario_ID_Usuario = ? WHERE ID_Carrera = ?`;
+exports.actualizar = (id, { Nombre, facultad_ID_Facultad, usuario_ID_Usuario }) => {
+  const sql = `UPDATE carrera SET Nombre = ?, facultad_ID_Facultad = ?, usuario_ID_Usuario = ? WHERE ID_Carrera = ?`;
   return new Promise((resolve, reject) => {
-    connection.query(sql, [Nombre, usuario_ID_Usuario, id], (err) =>
+    connection.query(sql, [Nombre, facultad_ID_Facultad, usuario_ID_Usuario, id], (err) =>
       err ? reject(err) : resolve()
     );
   });

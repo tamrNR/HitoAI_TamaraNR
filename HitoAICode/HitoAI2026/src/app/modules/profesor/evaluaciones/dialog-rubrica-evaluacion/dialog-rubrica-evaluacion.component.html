@@ -13,9 +13,8 @@
         <tr>
           <th>Indicador</th>
           <ng-container *ngIf="indicadores.length > 0 && criterios[indicadores[0].ID_Indicador]">
-            <th *ngFor="let c of criterios[indicadores[0].ID_Indicador]">
-              {{ c.Nombre }}<br>
-              <small>({{ c.R_Min }} - {{ c.R_Max }})</small>
+            <th *ngFor="let c of criteriosPadded(indicadores[0].ID_Indicador)">
+              <ng-container *ngIf="c">{{ c.Nombre }}<br><small>({{ c.R_Min }} - {{ c.R_Max }})</small></ng-container>
             </th>
           </ng-container>
           <th>Puntaje</th>
@@ -27,10 +26,12 @@
             {{ i.Descripcion }}<br>
             <small class="text-muted">(Máx: {{ i.Puntaje_Max }})</small>
           </td>
-          <ng-container *ngIf="criterios[i.ID_Indicador]">
-            <td *ngFor="let c of criterios[i.ID_Indicador]">
-              <div class="fw-normal">{{ c.Nombre }}</div>
-              <div class="text-muted small">({{ c.R_Min }} - {{ c.R_Max }})</div>
+          <ng-container *ngFor="let c of criteriosPadded(i.ID_Indicador)">
+            <td>
+              <ng-container *ngIf="c">
+                <div class="fw-normal">{{ c.Nombre }}</div>
+                <div class="text-muted small">({{ c.R_Min }} - {{ c.R_Max }})</div>
+              </ng-container>
             </td>
           </ng-container>
           <td>
@@ -38,9 +39,10 @@
                    class="form-control text-center"
                    [(ngModel)]="puntajes[i.ID_Indicador]"
                    [disabled]="modoSoloLectura || bloqueado"
-                   [min]="0"
+                   min="1"
+                   step="1"
                    [max]="i.Puntaje_Max"
-                   [class.is-invalid]="puntajes[i.ID_Indicador] < 0 || puntajes[i.ID_Indicador] > i.Puntaje_Max" />
+                   [class.is-invalid]="intentoGuardado && !puntajeValido(i)" />
           </td>
         </tr>
       </tbody>
@@ -53,8 +55,8 @@
     <span class="badge bg-primary">Nota: {{ calcularNota() }}</span>
   </div>
 
-  <div *ngIf="hayErroresDePuntaje()" class="alert alert-warning mt-3">
-    Algunos puntajes están fuera del rango permitido.
+  <div *ngIf="intentoGuardado && indicadorInvalido()" class="alert alert-warning mt-3">
+    Debes ingresar un puntaje entre 1 y {{ indicadorInvalido()?.Puntaje_Max }} en todos los indicadores.
   </div>
 
   <!-- Confirmación flotante -->
@@ -102,7 +104,7 @@
   <button *ngIf="!modoSoloLectura"
           class="btn btn-success"
           (click)="confirmarGuardado()"
-          [disabled]="hayErroresDePuntaje() || bloqueado">
+          [disabled]="bloqueado || (intentoGuardado && hayPuntajesInvalidos())">
     <i class="bi bi-check-circle me-1"></i> Guardar Puntajes
   </button>
 </div>

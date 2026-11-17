@@ -59,8 +59,9 @@ export class DialogCrearEvaluacionComponent implements OnInit {
   }
 
   crear() {
-    if (!this.nombre || !this.tipo || this.seleccionados.length === 0) {
-      this.mensajeError = 'Debes completar todos los campos y seleccionar al menos un contenido.';
+    if (this.bloqueado) return;
+    if (!this.nombre || !this.tipo) {
+      this.mensajeError = 'Debes completar todos los campos.';
       setTimeout(() => this.mensajeError = '', 3000);
       return;
     }

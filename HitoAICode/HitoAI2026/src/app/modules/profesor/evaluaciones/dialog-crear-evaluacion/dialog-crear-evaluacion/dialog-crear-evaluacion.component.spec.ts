@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 
 import { DialogCrearEvaluacionComponent } from './dialog-crear-evaluacion.component';
 
@@ -8,12 +11,18 @@ describe('DialogCrearEvaluacionComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DialogCrearEvaluacionComponent]
+      imports: [DialogCrearEvaluacionComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: NgbActiveModal, useValue: { close: () => {}, dismiss: () => {} } }
+      ]
     })
     .compileComponents();
 
     fixture = TestBed.createComponent(DialogCrearEvaluacionComponent);
     component = fixture.componentInstance;
+    component.asignatura = { ID_Asignatura: 'test' };
     fixture.detectChanges();
   });
 

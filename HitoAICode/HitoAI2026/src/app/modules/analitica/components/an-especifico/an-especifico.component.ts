@@ -1614,22 +1614,10 @@ export class AnEspecificoComponent implements OnInit, OnDestroy {
   // ═══════════════════════════════════════════════════════════════════════════
 
   volverAGeneral(): void {
-    const urlActual = this.router.url;
-    let rutaDestino: string[];
-
-    if (urlActual.includes('/profesor/')) {
-      rutaDestino = ['/profesor', 'analitica', 'general'];
-    } else if (urlActual.includes('/jefe-carrera/')) {
-      rutaDestino = ['/jefe-carrera', 'analitica', 'general'];
-    } else {
-      rutaDestino = ['..', '..', 'general'];
-    }
-
-    this.router.navigate(rutaDestino, {
-      relativeTo: rutaDestino[0].startsWith('/') ? null : this.route
-    }).catch(() => {
-      this.router.navigate(['..', '..', 'general'], { relativeTo: this.route });
-    });
+    const destino = this.router.url
+      .split('?')[0]
+      .replace(/\/detalle\/[^/]+$/, '/general');
+    this.router.navigateByUrl(destino);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

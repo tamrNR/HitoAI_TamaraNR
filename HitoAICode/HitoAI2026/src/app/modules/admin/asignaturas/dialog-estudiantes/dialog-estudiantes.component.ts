@@ -95,7 +95,7 @@ export class DialogEstudiantesComponent implements OnInit {
         this.mostrarToastCSV = true;
         this.cargarEstudiantes();
 
-        setTimeout(() => this.mostrarToastCSV = false, 3000);
+        setTimeout(() => this.mostrarToastCSV = false, (resp.rechazados > 0 || resp.yaCargado) ? 15000 : 3000);
       });
     }
   }

@@ -10,84 +10,71 @@ exports.contarPorAsignatura = (asignaturaID) => {
   });
 };
 
-exports.crearConAplicaciones = (data) => {
-  return new Promise((resolve, reject) => {
-    const { Nombre, Tipo, N_Instancia, Fecha, asignatura_ID_Asignatura, contenidos } = data;
+exports.crearConAplicaciones = async (data) => {
+  const { Nombre, Tipo, N_Instancia, Fecha, asignatura_ID_Asignatura } = data;
 
-    if (!asignatura_ID_Asignatura) {
-      return reject(new Error('Debe enviar el ID de la asignatura'));
+  if (!asignatura_ID_Asignatura) {
+    throw new Error('Debe enviar el ID de la asignatura');
+  }
+
+  const pool = require('../db/pool');
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [evResult] = await conn.query(
+      `INSERT INTO evaluacion (Nombre, Tipo, N_Instancia, Fecha, asignatura_ID_Asignatura)
+       VALUES (?, ?, ?, ?, ?)`,
+      [Nombre, Tipo, N_Instancia, Fecha, asignatura_ID_Asignatura]
+    );
+    const evaluacionID = evResult.insertId;
+
+    // Misma lógica que AplicacionService.obtenerIndicadoresPorEvaluacion:
+    // TODOS los indicadores de TODOS los contenidos de la asignatura.
+    const [indicadores] = await conn.query(
+      `SELECT DISTINCT i.ID_Indicador
+       FROM indicador i
+       JOIN contenido c ON i.contenido_ID_Contenido = c.ID_Contenido
+       WHERE c.asignatura_ID_Asignatura = ?`,
+      [asignatura_ID_Asignatura]
+    );
+    if (indicadores.length === 0) {
+      throw new Error('La asignatura no tiene indicadores asociados.');
     }
 
-    const sqlEvaluacion = `
-      INSERT INTO evaluacion (Nombre, Tipo, N_Instancia, Fecha, asignatura_ID_Asignatura)
-      VALUES (?, ?, ?, ?, ?)
-    `;
+    // Regla de negocio: toda evaluación evalúa TODOS los indicadores de la
+    // asignatura para TODOS los alumnos inscritos. Obtenido = 0 = pendiente.
+    // Si no hay inscritos se crea la evaluación igual, sin filas en aplicacion.
+    const [inscripciones] = await conn.query(
+      `SELECT ID_Inscripcion FROM inscripcion WHERE asignatura_ID_Asignatura = ?`,
+      [asignatura_ID_Asignatura]
+    );
+    if (inscripciones.length > 0) {
+      await conn.query(
+        `INSERT INTO aplicacion (inscripcion_ID_Inscripcion, evaluacion_ID_Evaluacion, indicador_ID_Indicador, Obtenido, Grupo)
+         SELECT DISTINCT ins.ID_Inscripcion, ?, i.ID_Indicador, 0, 0
+         FROM inscripcion ins
+         JOIN contenido c ON c.asignatura_ID_Asignatura = ins.asignatura_ID_Asignatura
+         JOIN indicador i ON i.contenido_ID_Contenido = c.ID_Contenido
+         WHERE ins.asignatura_ID_Asignatura = ?
+           AND NOT EXISTS (
+             SELECT 1 FROM aplicacion a
+             WHERE a.inscripcion_ID_Inscripcion = ins.ID_Inscripcion
+               AND a.evaluacion_ID_Evaluacion = ?
+               AND a.indicador_ID_Indicador = i.ID_Indicador
+           )`,
+        [evaluacionID, asignatura_ID_Asignatura, evaluacionID]
+      );
+    }
 
-    connection.query(sqlEvaluacion, [Nombre, Tipo, N_Instancia, Fecha, asignatura_ID_Asignatura], (err, result) => {
-      if (err) return reject(err);
-      const evaluacionID = result.insertId;
-
-      const sqlInscripciones = `
-        SELECT * FROM inscripcion
-        WHERE asignatura_ID_Asignatura = ?
-      `;
-
-      connection.query(sqlInscripciones, [asignatura_ID_Asignatura], (err, inscripciones) => {
-        if (err) return reject(err);
-        if (inscripciones.length === 0) {
-          return reject(new Error('No hay estudiantes inscritos en esta asignatura.'));
-        }
-
-        let tareasPendientes = 0;
-        let falló = false;
-        let totalAplicaciones = 0;
-
-        for (const contenidoID of contenidos) {
-          const sqlIndicadores = `
-            SELECT * FROM indicador
-            WHERE contenido_ID_Contenido = ?
-          `;
-
-          connection.query(sqlIndicadores, [contenidoID], (err, indicadores) => {
-            if (err) {
-              falló = true;
-              return reject(err);
-            }
-
-            if (indicadores.length === 0) {
-              return reject(new Error(`El contenido con ID ${contenidoID} no tiene indicadores asociados.`));
-            }
-
-            for (const insc of inscripciones) {
-              for (const ind of indicadores) {
-                const sqlAplicacion = `
-                  INSERT INTO aplicacion (Obtenido, Grupo, inscripcion_ID_Inscripcion, evaluacion_ID_Evaluacion, indicador_ID_Indicador)
-                  VALUES (0, 0, ?, ?, ?)
-                `;
-
-                tareasPendientes++;
-                connection.query(sqlAplicacion, [insc.ID_Inscripcion, evaluacionID, ind.ID_Indicador], (err) => {
-                  if (err && !falló) {
-                    falló = true;
-                    return reject(err);
-                  }
-
-                  tareasPendientes--;
-                  if (tareasPendientes === 0 && !falló) {
-                    resolve();
-                  }
-                });
-              }
-            }
-          });
-        }
-
-        if (contenidos.length === 0) {
-          return reject(new Error('Debes seleccionar al menos un contenido.'));
-        }
-      });
-    });
-  });
+    await conn.commit();
+    return { evaluacionID };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 };
 
 exports.obtenerPorAsignatura = (asignaturaID) => {

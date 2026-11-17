@@ -1,4 +1,5 @@
 const connection = require('../db/connection');
+const pool = require('../db/pool');
 
 // 1. Trae los indicadores de una evaluación + asignatura
 exports.obtenerIndicadoresPorEvaluacion = (evaluacionID, asignaturaID) => {
@@ -17,32 +18,104 @@ exports.obtenerIndicadoresPorEvaluacion = (evaluacionID, asignaturaID) => {
   });
 };
 
-// 2. Actualiza puntajes obtenidos por grupo
-exports.actualizarPuntajesGrupo = (grupos) => {
-  const actualizaciones = [];
+// 2. Valida que el payload cubra TODOS los indicadores de la asignatura
+//    y que cada puntaje sea entero entre 1 y Puntaje_Max (leído de BD).
+exports.validarPuntajesGrupo = async (grupos) => {
+  if (!Array.isArray(grupos) || grupos.length === 0) {
+    return { ok: false, mensaje: 'Payload inválido: se requiere una lista de indicadores.' };
+  }
 
+  const { evaluacionID, asignaturaID } = grupos[0];
   for (const g of grupos) {
-    for (const estudianteID of g.estudiantes) {
-      const sql = `
-        UPDATE aplicacion a
-        JOIN inscripcion ins ON a.inscripcion_ID_Inscripcion = ins.ID_Inscripcion
-        SET a.Obtenido = ?
-        WHERE ins.estudiante_ID_Estudiante = ?
-        AND ins.asignatura_ID_Asignatura = ?
-        AND a.evaluacion_ID_Evaluacion = ?
-        AND a.indicador_ID_Indicador = ?
-      `;
-      const params = [g.obtenido, estudianteID, g.asignaturaID, g.evaluacionID, g.indicadorID];
-
-      actualizaciones.push(
-        new Promise((resolve, reject) => {
-          connection.query(sql, params, (err) => (err ? reject(err) : resolve()));
-        })
-      );
+    if (Number(g.evaluacionID) !== Number(evaluacionID) || String(g.asignaturaID) !== String(asignaturaID)) {
+      return { ok: false, mensaje: 'Todos los registros deben pertenecer a la misma evaluación y asignatura.' };
+    }
+    if (!Array.isArray(g.estudiantes) || g.estudiantes.length === 0) {
+      return { ok: false, mensaje: 'Cada indicador debe incluir al menos un estudiante.' };
     }
   }
 
-  return Promise.all(actualizaciones);
+  const indicadores = await exports.obtenerIndicadoresPorEvaluacion(evaluacionID, asignaturaID);
+  const maxPorIndicador = new Map();
+  for (const ind of indicadores) {
+    const id = Number(ind.ID_Indicador);
+    if (!maxPorIndicador.has(id)) maxPorIndicador.set(id, Number(ind.Puntaje_Max));
+  }
+
+  const recibidos = new Set(grupos.map(g => Number(g.indicadorID)));
+  for (const id of maxPorIndicador.keys()) {
+    if (!recibidos.has(id)) {
+      return { ok: false, mensaje: `Falta puntaje para el indicador ${id}. Todos los indicadores de la asignatura son obligatorios.` };
+    }
+  }
+
+  for (const g of grupos) {
+    const id = Number(g.indicadorID);
+    const max = maxPorIndicador.get(id);
+    if (max === undefined) {
+      return { ok: false, mensaje: `El indicador ${id} no pertenece a la asignatura ${asignaturaID}.` };
+    }
+    const v = Number(g.obtenido);
+    if (g.obtenido === null || g.obtenido === undefined ||
+        !Number.isInteger(v) || v < 1 || v > max) {
+      return { ok: false, mensaje: `El puntaje del indicador ${id} debe ser un entero entre 1 y ${max}.` };
+    }
+  }
+
+  return { ok: true };
+};
+
+// 3. UPSERT de puntajes por grupo dentro de una transacción.
+//    Por cada (indicador × estudiante): inserta la fila si no existe y luego actualiza.
+exports.actualizarPuntajesGrupo = async (grupos) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    for (const g of grupos) {
+      for (const estudianteID of g.estudiantes) {
+        // INSERT si no existe: copia el Grupo que el estudiante ya tiene
+        // en esa evaluación (0 si aún no está en ninguno)
+        await conn.query(`
+          INSERT INTO aplicacion (inscripcion_ID_Inscripcion, evaluacion_ID_Evaluacion, indicador_ID_Indicador, Obtenido, Grupo)
+          SELECT ins.ID_Inscripcion, ?, ?, 0,
+                 COALESCE((
+                   SELECT a2.Grupo
+                   FROM aplicacion a2
+                   WHERE a2.inscripcion_ID_Inscripcion = ins.ID_Inscripcion
+                     AND a2.evaluacion_ID_Evaluacion = ?
+                   LIMIT 1
+                 ), 0)
+          FROM inscripcion ins
+          WHERE ins.estudiante_ID_Estudiante = ?
+            AND ins.asignatura_ID_Asignatura = ?
+            AND NOT EXISTS (
+              SELECT 1 FROM aplicacion a
+              WHERE a.inscripcion_ID_Inscripcion = ins.ID_Inscripcion
+                AND a.evaluacion_ID_Evaluacion = ?
+                AND a.indicador_ID_Indicador = ?
+            )
+        `, [g.evaluacionID, g.indicadorID, g.evaluacionID, estudianteID, g.asignaturaID, g.evaluacionID, g.indicadorID]);
+
+        await conn.query(`
+          UPDATE aplicacion a
+          JOIN inscripcion ins ON a.inscripcion_ID_Inscripcion = ins.ID_Inscripcion
+          SET a.Obtenido = ?
+          WHERE ins.estudiante_ID_Estudiante = ?
+            AND ins.asignatura_ID_Asignatura = ?
+            AND a.evaluacion_ID_Evaluacion = ?
+            AND a.indicador_ID_Indicador = ?
+        `, [g.obtenido, estudianteID, g.asignaturaID, g.evaluacionID, g.indicadorID]);
+      }
+    }
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 };
 
 // 3. Estudiantes que ya han sido evaluados (Obtenido > 0)

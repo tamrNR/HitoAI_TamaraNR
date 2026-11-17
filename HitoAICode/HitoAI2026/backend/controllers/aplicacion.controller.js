@@ -16,6 +16,10 @@ exports.obtenerIndicadoresPorEvaluacion = async (req, res) => {
 // Actualiza los puntajes de un grupo
 exports.actualizarPuntajesGrupo = async (req, res) => {
   try {
+    const validacion = await AplicacionService.validarPuntajesGrupo(req.body);
+    if (!validacion.ok) {
+      return res.status(400).json({ message: validacion.mensaje });
+    }
     await AplicacionService.actualizarPuntajesGrupo(req.body);
     res.json({ message: 'Puntajes actualizados correctamente' });
   } catch (err) {

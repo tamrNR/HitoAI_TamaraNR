@@ -19,8 +19,9 @@ export class DialogRubricaEvaluacionComponent implements OnInit {
 
   indicadores: any[] = [];
   criterios: { [indicadorID: number]: any[] } = {};
-  puntajes: { [indicadorID: number]: number } = {};
+  puntajes: { [indicadorID: number]: number | null } = {};
   modoSoloLectura = false;
+  intentoGuardado = false;
 
   mensajeExito = '';
   mensajeError = '';
@@ -69,10 +70,12 @@ export class DialogRubricaEvaluacionComponent implements OnInit {
       console.log('📊 Puntajes para estudiante:', est.ID_Estudiante, datos);
 
       for (const p of datos) {
-        if (!mapa[p.indicador_ID_Indicador]) mapa[p.indicador_ID_Indicador] = [];
-        mapa[p.indicador_ID_Indicador].push(p.Obtenido);
-
-        if (p.Obtenido > 0) algunEvaluado = true;
+        // Obtenido = 0 significa "pendiente": no cuenta como dato cargado
+        if (p.Obtenido > 0) {
+          if (!mapa[p.indicador_ID_Indicador]) mapa[p.indicador_ID_Indicador] = [];
+          mapa[p.indicador_ID_Indicador].push(p.Obtenido);
+          algunEvaluado = true;
+        }
       }
     }
 
@@ -91,7 +94,7 @@ export class DialogRubricaEvaluacionComponent implements OnInit {
   }
 
   calcularTotal(): number {
-    return Object.values(this.puntajes).reduce((a, b) => a + (b || 0), 0);
+    return Object.values(this.puntajes).reduce<number>((a, b) => a + (b ?? 0), 0);
   }
 
   calcularPuntajeIdeal(): number {
@@ -107,11 +110,30 @@ export class DialogRubricaEvaluacionComponent implements OnInit {
     return Math.round((this.calcularTotal() / totalMax) * 100);
   }
 
-  hayErroresDePuntaje(): boolean {
-    return this.indicadores.some(i => {
-      const val = this.puntajes[i.ID_Indicador];
-      return val != null && (val < 0 || val > i.Puntaje_Max);
-    });
+  puntajeValido(ind: any): boolean {
+    const v = this.puntajes[ind.ID_Indicador];
+    const n = Number(v);
+    return v !== null && v !== undefined &&
+           Number.isInteger(n) && n >= 1 && n <= Number(ind.Puntaje_Max);
+  }
+
+  hayPuntajesInvalidos(): boolean {
+    return this.indicadores.some(i => !this.puntajeValido(i));
+  }
+
+  indicadorInvalido(): any | null {
+    return this.indicadores.find(i => !this.puntajeValido(i)) || null;
+  }
+
+  // Alinea las columnas de criterios: rellena con null hasta el máximo
+  get maxCriterios(): number {
+    return this.indicadores.reduce(
+      (m, i) => Math.max(m, this.criterios[i.ID_Indicador]?.length ?? 0), 0);
+  }
+
+  criteriosPadded(id: number): any[] {
+    const lista = this.criterios[id] ?? [];
+    return [...lista, ...Array(Math.max(0, this.maxCriterios - lista.length)).fill(null)];
   }
 
   habilitarEdicion() {
@@ -127,22 +149,30 @@ export class DialogRubricaEvaluacionComponent implements OnInit {
   }
 
   guardar() {
+    this.intentoGuardado = true;
+    const invalido = this.indicadorInvalido();
+    if (invalido) {
+      this.mensajeError = `Debes ingresar un puntaje entre 1 y ${invalido.Puntaje_Max} en todos los indicadores`;
+      setTimeout(() => this.mensajeError = '', 4000);
+      return;
+    }
+
     const grupo = this.estudiantes.map(e => e.ID_Estudiante);
     const data = this.indicadores.map(ind => ({
       evaluacionID: this.evaluacionID,
       asignaturaID: this.asignaturaID,
       indicadorID: ind.ID_Indicador,
       estudiantes: grupo,
-      obtenido: this.puntajes[ind.ID_Indicador] || 0
+      obtenido: this.puntajes[ind.ID_Indicador]
     }));
 
     this.bloqueado = true;
     this.aplicacionService.actualizarPuntajesGrupo(data).subscribe(() => {
       this.mensajeExito = 'Puntajes guardados correctamente';
       setTimeout(() => this.modal.close('actualizado'), 1500);
-    }, () => {
+    }, (err) => {
       this.bloqueado = false;
-      this.mensajeError = 'Error al guardar los puntajes';
+      this.mensajeError = err?.error?.message || 'Error al guardar los puntajes';
       setTimeout(() => this.mensajeError = '', 3000);
     });
   }

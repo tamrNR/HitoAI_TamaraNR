@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 
 import { MainEvaluacionDetalleComponent } from './main-evaluacion-detalle.component';
 
@@ -8,7 +11,12 @@ describe('MainEvaluacionDetalleComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MainEvaluacionDetalleComponent]
+      imports: [MainEvaluacionDetalleComponent],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: NgbActiveModal, useValue: { close: () => {}, dismiss: () => {} } }
+      ]
     })
     .compileComponents();
 
